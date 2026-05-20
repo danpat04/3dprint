@@ -1,0 +1,8 @@
+services:
+  viewer:
+    build: .
+    ports:
+      - "3939:3939"
+    volumes:
+      - ./models:/app/models
+    restart: unless-stopped

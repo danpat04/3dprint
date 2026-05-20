@@ -1,0 +1,17 @@
+[project]
+name = "modeling"
+version = "0.1.0"
+description = "3D modeling for 3D printing with build123d"
+requires-python = ">=3.11"
+dependencies = [
+    "build123d",
+    "f3d>=3.5.0",
+    "ocp-vscode",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["models"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
