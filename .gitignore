@@ -8,3 +8,4 @@ dist/
 *.3mf
 exports/
 intermediate/
+feedback/
