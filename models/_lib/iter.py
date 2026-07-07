@@ -57,6 +57,7 @@ def _render_four_views(step_path: Path, out_dir: Path, iter_num: int) -> list[Pa
 
     views = {
         "iso":   ((dist * 0.577, -dist * 0.577, dist * 0.577), (0, 0, 1)),
+        "iso2":  ((-dist * 0.577, dist * 0.577, dist * 0.577), (0, 0, 1)),
         "front": ((0, -dist, 0), (0, 0, 1)),
         "top":   ((0, 0, dist), (0, 1, 0)),
         "side":  ((dist, 0, 0), (0, 0, 1)),
@@ -103,5 +104,24 @@ def finalize_iteration(part, *, project_dir: Path | None = None, show_in_viewer:
             show(part, reset_camera=Camera.RESET)
         except Exception as e:
             print(f"[models] show() 실패 (ocp_vscode 컨테이너 미실행?): {e}")
+        _notify_feedback_tool(project_name)
 
     return iter_num
+
+
+def _notify_feedback_tool(project_name: str) -> None:
+    """feedback_tool(:3940) 에 현재 프로젝트를 알려, 피드백 캡처 시 자동 선택되게 한다.
+    서버가 안 떠 있어도 모델링은 계속되도록 best-effort."""
+    import json
+    import urllib.request
+
+    try:
+        req = urllib.request.Request(
+            "http://localhost:3940/feedback/current",
+            data=json.dumps({"project": project_name}).encode(),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        urllib.request.urlopen(req, timeout=1.5)
+    except Exception:
+        pass
