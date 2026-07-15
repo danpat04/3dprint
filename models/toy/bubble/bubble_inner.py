@@ -1,13 +1,10 @@
 """버블 이너 — bubble_tube 내벽에 맞는 플러그 (뒤집힌 형태)."""
 
-from datetime import datetime
-from pathlib import Path
 
 from build123d import (
-    Align, BuildPart, BuildSketch, Circle, Cylinder, Mode, Part, Plane, export_step, loft,
+    Align, BuildPart, BuildSketch, Circle, Cylinder, Mode, Part, Plane, loft,
 )
 from OCP.BRepAlgoAPI import BRepAlgoAPI_Common, BRepAlgoAPI_Cut
-from ocp_vscode import Camera, show
 
 # bubble_tube 내부 치수 (뒤집어서 사용)
 # tube: 아래(80) → 허리(25) → 위(40), 직선구간 10mm
@@ -124,12 +121,5 @@ ring_shape = BRepAlgoAPI_Cut(slab_in_cavity, inner_sub.part.wrapped).Shape()
 ring = Part(ring_shape)
 result = result.fuse(ring)
 
-# STEP 내보내기
-export_dir = Path(__file__).resolve().parent.parent.parent / "exports"
-export_dir.mkdir(exist_ok=True)
-timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-step_path = export_dir / f"bubble_inner_{timestamp}.step"
-export_step(result, str(step_path))
-print(f"Exported: {step_path}")
-
-show(result, reset_camera=Camera.RESET)
+from models._lib.iter import finalize_iteration
+finalize_iteration(part.part)

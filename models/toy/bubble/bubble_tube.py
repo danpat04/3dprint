@@ -1,14 +1,9 @@
 """버블 튜브 — 나팔 형태 (아래 끝 직선 실린더)."""
 
-from datetime import datetime
-from pathlib import Path
 
 from build123d import (
     Align, BuildPart, BuildSketch, Circle, Cylinder, Mode, Plane, loft,
 )
-from OCP.BRepMesh import BRepMesh_IncrementalMesh
-from OCP.StlAPI import StlAPI_Writer
-from ocp_vscode import Camera, show
 
 # 치수 (mm)
 BOTTOM_INNER_D = 80   # 나가는 쪽 (아래) 내경
@@ -54,14 +49,5 @@ with BuildPart() as part:
         mode=Mode.SUBTRACT,
     )
 
-# STL 내보내기
-export_dir = Path(__file__).resolve().parent.parent.parent / "exports"
-export_dir.mkdir(exist_ok=True)
-timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-stl_path = export_dir / f"bubble_tube_{timestamp}.stl"
-BRepMesh_IncrementalMesh(part.part.wrapped, 0.1)
-writer = StlAPI_Writer()
-writer.Write(part.part.wrapped, str(stl_path))
-print(f"Exported: {stl_path}")
-
-show(part, reset_camera=Camera.RESET)
+from models._lib.iter import finalize_iteration
+finalize_iteration(part.part)

@@ -1,14 +1,11 @@
 """버블 팁 — bubble_head 위에 6개 들어가는 실린더 단품."""
 
 import math
-from datetime import datetime
-from pathlib import Path
 
 from build123d import (
     Align, Box, BuildLine, BuildPart, BuildSketch, CenterArc, Cylinder, Line,
-    Location, Locations, Mode, Plane, export_step, extrude, make_face,
+    Location, Locations, Mode, Plane, extrude, make_face,
 )
-from ocp_vscode import Camera, show
 
 # 치수 (mm)
 POST_OUTER_D = 20   # 외경
@@ -85,12 +82,5 @@ with BuildPart() as tabs:
             )
 result = result.fuse(tabs.part)
 
-# STEP 내보내기
-export_dir = Path(__file__).resolve().parent.parent.parent / "exports"
-export_dir.mkdir(exist_ok=True)
-timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-step_path = export_dir / f"bubble_tip_{timestamp}.step"
-export_step(result, str(step_path))
-print(f"Exported: {step_path}")
-
-show(result, reset_camera=Camera.RESET)
+from models._lib.iter import finalize_iteration
+finalize_iteration(part.part)

@@ -1,15 +1,12 @@
 """버블 헤드."""
 
-from datetime import datetime
-from pathlib import Path
 
 import math
 
 from build123d import (
     Align, Box, BuildPart, BuildSketch, Circle, Cylinder, Location, Locations, Mode,
-    Plane, export_step, loft,
+    Plane, loft,
 )
-from ocp_vscode import Camera, show
 
 # 치수 (mm)
 OUTER_D = 79.82     # 실린더 외경
@@ -75,12 +72,5 @@ with BuildPart() as part:
 
 result = part.part
 
-# STEP 내보내기
-export_dir = Path(__file__).resolve().parent.parent.parent / "exports"
-export_dir.mkdir(exist_ok=True)
-timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-step_path = export_dir / f"bubble_head_{timestamp}.step"
-export_step(result, str(step_path))
-print(f"Exported: {step_path}")
-
-show(result, reset_camera=Camera.RESET)
+from models._lib.iter import finalize_iteration
+finalize_iteration(part.part)
