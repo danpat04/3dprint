@@ -24,7 +24,7 @@ from build123d import (
 )
 
 from models._lib.iter import finalize_iteration
-from models.camping_cutlery_holder.params import (
+from models.camping.camping_cutlery_holder.params import (
     BACK_CLR, BASE, BOSS_D, BOSS_W, DRAIN_D, DT_CLR, DT_DEPTH, DT_NECK,
     DT_SEAT, DT_W, FLOOR_RISE, H_OPEN, HOOK_WIDTH, HOOK_X, IN_D, IN_H, IN_W,
     MESH_P, MESH_RIB, OUT_D, OUT_H, OUT_W, SLOT_CAP, SLOT_TOP, THROAT_R,

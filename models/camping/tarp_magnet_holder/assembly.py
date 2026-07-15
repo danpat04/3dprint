@@ -8,8 +8,8 @@
 from build123d import Pos
 
 from models._lib.iter import finalize_iteration
-from models.tarp_magnet_holder.bottom import TOTAL_H as BOTTOM_TOP_Z, build_bottom
-from models.tarp_magnet_holder.top import SKIRT_H, build_top
+from models.camping.tarp_magnet_holder.bottom import TOTAL_H as BOTTOM_TOP_Z, build_bottom
+from models.camping.tarp_magnet_holder.top import SKIRT_H, build_top
 
 
 bottom = build_bottom()

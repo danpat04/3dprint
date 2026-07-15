@@ -11,8 +11,8 @@ from pathlib import Path
 
 from build123d import export_step
 
-from models.camping_cutlery_holder.holder import build_holder
-from models.camping_cutlery_holder.hook import build_hook
+from models.camping.camping_cutlery_holder.holder import build_holder
+from models.camping.camping_cutlery_holder.hook import build_hook
 
 _EXPORTS = Path(__file__).resolve().parent / "exports"
 _EXPORTS.mkdir(exist_ok=True)
