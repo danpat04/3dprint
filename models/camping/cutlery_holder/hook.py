@@ -1,4 +1,4 @@
-"""camping_cutlery_holder — S후크 (별도 부품, 좌우 2개 동일).
+"""cutlery_holder — S후크 (별도 부품, 좌우 2개 동일).
 
 재설계 (통이 박스 바깥에 걸림):
   - 통 뒷면(y=Y0)이 박스 바깥면에 밀착. 박스 벽은 통 뒤(-Y).
@@ -24,7 +24,7 @@ from build123d import (
 )
 
 from models._lib.iter import finalize_iteration
-from models.camping.camping_cutlery_holder.params import (
+from models.camping.cutlery_holder.params import (
     BOX_WALL,
     DT_DEPTH,
     DT_NECK,

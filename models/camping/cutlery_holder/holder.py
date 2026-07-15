@@ -1,4 +1,4 @@
-"""camping_cutlery_holder — 통(holder) 파트.
+"""cutlery_holder — 통(holder) 파트.
 
 그물망 통 + 원뿔 깔때기 바닥 + 뒷면 더브테일 슬롯(암) 2개.
 일체형 후크는 없음 (후크는 별도 부품 hook.py). 통은 세워서 출력.
@@ -24,7 +24,7 @@ from build123d import (
 )
 
 from models._lib.iter import finalize_iteration
-from models.camping.camping_cutlery_holder.params import (
+from models.camping.cutlery_holder.params import (
     BACK_CLR, BASE, BOSS_D, BOSS_W, DRAIN_D, DT_CLR, DT_DEPTH, DT_NECK,
     DT_SEAT, DT_W, FLOOR_RISE, H_OPEN, HOOK_WIDTH, HOOK_X, IN_D, IN_H, IN_W,
     MESH_P, MESH_RIB, OUT_D, OUT_H, OUT_W, SLOT_CAP, SLOT_TOP, THROAT_R,

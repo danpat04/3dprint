@@ -1,4 +1,4 @@
-"""camping_cutlery_holder 공유 파라미터.
+"""cutlery_holder 공유 파라미터.
 
 통(holder) · 후크(hook) · 조립(assembly) 이 공통으로 참조하는 치수.
 더브테일 인터페이스가 암/수 양쪽에서 일치해야 하므로 여기 한 곳에 모은다.

@@ -68,9 +68,9 @@ python -m models.<project>.export
 
 ## 모델 목록 (일부)
 
-- **camping_cutlery_holder** — 캠핑 박스 수저통 (그물망 통 + 더브테일 후크)
+- **camping/** — cutlery_holder(수저통) · tarp_magnet_holder(타프 자석) · knife_cover(식칼 시스)
 - **coffee/** — tamper_stand · portafilter_stand · feimaobuk_a2_cup · distributor_stand · dutch_knob
 - **mouse_case** — 무선 마우스 여행용 케이스 (자석 결합)
-- **knife_cover · shrimp_scoop · tarp_magnet_holder · juice_pack_holder · monitor_stand · puck_screen_holder** 등
+- **shrimp_scoop · juice_pack_holder · monitor_stand · puck_screen_holder** 등
 
 각 모델의 상세 스펙·이미지는 해당 폴더의 `README.md` 참고.
