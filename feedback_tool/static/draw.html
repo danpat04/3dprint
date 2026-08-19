@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<!-- feedback_tool — Excalidraw 드로잉 페이지.
+
+  /draw            백지 스케치 → 도구 형태 제안 → models/_drafts/<이름>/
+  /draw?bg=<id>    뷰어 캡처(POST /feedback/capture) 위에 덧그림
+                   → models/<project>/feedback/  (기존 피드백 흐름)
+
+  Excalidraw 는 esm.sh CDN 에서 React 컴포넌트로 로드 (빌드 불필요).
+-->
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>스케치 — modeling</title>
+<link rel="stylesheet" href="https://unpkg.com/@excalidraw/excalidraw@0.18.0/dist/prod/index.css" />
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden;
+    font-family: system-ui, -apple-system, sans-serif; }
+  #bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    padding: 8px 10px; background: #26262b; color: #eee; font-size: 14px; }
+  #bar .tag { font-weight: 600; color: #34c759; }
+  #bar input, #bar select { padding: 7px 9px; border-radius: 8px;
+    border: 1px solid #555; background: #1c1c20; color: #fff; font-size: 14px; }
+  #note { flex: 1; min-width: 120px; }
+  #bar button { padding: 8px 14px; border: none; border-radius: 8px;
+    background: #34c759; color: #fff; font-size: 14px; font-weight: 600;
+    cursor: pointer; }
+  #bar button:disabled { opacity: .5; }
+  #wrap { position: fixed; inset: 0; display: flex; flex-direction: column; }
+  #canvas-root { flex: 1; position: relative; }
+  #loading { position: absolute; inset: 0; display: flex; align-items: center;
+    justify-content: center; color: #888; font-size: 15px; }
+  #toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+    z-index: 100001; background: #222; color: #fff; padding: 10px 16px;
+    border-radius: 8px; font-size: 14px; opacity: 0; transition: opacity .2s;
+    pointer-events: none; }
+  #toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="bar"></div>
+  <div id="canvas-root"><div id="loading">Excalidraw 불러오는 중…</div></div>
+</div>
+<div id="toast"></div>
+
+<script>
+  // Excalidraw 폰트 등 정적 자산 경로 (CDN)
+  window.EXCALIDRAW_ASSET_PATH = "https://unpkg.com/@excalidraw/excalidraw@0.18.0/dist/prod/";
+</script>
+<script type="module">
+  import React from "https://esm.sh/react@18.3.1";
+  import { createRoot } from "https://esm.sh/react-dom@18.3.1/client";
+  import * as EX from "https://esm.sh/@excalidraw/excalidraw@0.18.0?deps=react@18.3.1,react-dom@18.3.1";
+
+  const API = "/feedback";
+  const params = new URLSearchParams(location.search);
+  const bgId = params.get("bg");            // 있으면 피드백 모드
+  const mode = bgId ? "feedback" : "draft";
+  let api = null;                            // ExcalidrawImperativeAPI
+
+  // ---------- 상단 바 ----------
+  const bar = document.getElementById("bar");
+  const noteInput = el("input", { id: "note", placeholder: "메모 (선택)" });
+  let projectSel = null, nameInput = null;
+
+  if (mode === "feedback") {
+    bar.append(el("span", { textContent: "✏️ 피드백" }, "tag"));
+    projectSel = el("select");
+    projectSel.innerHTML = `<option value="">프로젝트…</option>`;
+    bar.append(projectSel);
+  } else {
+    bar.append(el("span", { textContent: "🎨 새 스케치" }, "tag"));
+    nameInput = el("input", { placeholder: "이름 (예: cup_holder)" });
+    nameInput.style.width = "180px";
+    bar.append(nameInput);
+    bar.append(el("span", { textContent: "→ models/_drafts/" }));
+  }
+  bar.append(noteInput);
+  const upBtn = el("button", { textContent: "⬆ 업로드" });
+  upBtn.addEventListener("click", upload);
+  bar.append(upBtn);
+
+  function el(tag, props = {}, cls) {
+    const e = document.createElement(tag);
+    Object.assign(e, props);
+    if (cls) e.className = cls;
+    return e;
+  }
+
+  // ---------- Excalidraw 마운트 ----------
+  const root = createRoot(document.getElementById("canvas-root"));
+  root.render(
+    React.createElement(EX.Excalidraw, {
+      excalidrawAPI: (a) => { api = a; onReady(); },
+      langCode: "ko-KR",
+      UIOptions: { canvasActions: { loadScene: false, saveToActiveFile: false } },
+    })
+  );
+
+  async function onReady() {
+    if (mode === "feedback") {
+      await Promise.all([loadProjects(), loadBackground()]);
+    }
+  }
+
+  // ---------- 피드백 모드: 프로젝트 + 배경 캡처 ----------
+  async function loadProjects() {
+    try {
+      const [pr, cr] = await Promise.all([
+        fetch(`${API}/projects`).then((r) => r.json()),
+        fetch(`${API}/current`).then((r) => r.json()).catch(() => ({ project: null })),
+      ]);
+      for (const p of pr.projects || []) {
+        const o = document.createElement("option");
+        o.value = p; o.textContent = p;
+        projectSel.appendChild(o);
+      }
+      if (cr.project) projectSel.value = cr.project;
+    } catch (e) { console.error(e); toast("프로젝트 목록 로드 실패"); }
+  }
+
+  async function loadBackground() {
+    try {
+      const res = await fetch(`${API}/capture/${bgId}`);
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const blob = await res.blob();
+      const dataURL = await blobToDataURL(blob);
+      const img = await loadImage(dataURL);
+
+      const fileId = "bg-capture";
+      api.addFiles([{ id: fileId, dataURL, mimeType: "image/png", created: Date.now() }]);
+      const elements = EX.convertToExcalidrawElements([{
+        type: "image", fileId,
+        x: 0, y: 0, width: img.naturalWidth, height: img.naturalHeight,
+        locked: true,
+      }]);
+      api.updateScene({ elements });
+      api.scrollToContent(undefined, { fitToContent: true });
+    } catch (e) {
+      console.error(e);
+      toast("캡처 배경을 불러오지 못했습니다 (만료?) — 백지로 진행");
+    }
+  }
+
+  // ---------- 업로드 ----------
+  async function upload() {
+    if (!api) return;
+    const elements = api.getSceneElements();
+    if (!elements.length) { toast("그린 내용이 없습니다"); return; }
+
+    let endpoint, payload;
+    if (mode === "feedback") {
+      const project = projectSel.value;
+      if (!project) { toast("프로젝트를 선택하세요"); return; }
+      endpoint = `${API}/upload`;
+      payload = { project, note: noteInput.value || "" };
+    } else {
+      const name = nameInput.value.trim();
+      if (!name) { toast("스케치 이름을 입력하세요"); nameInput.focus(); return; }
+      endpoint = `${API}/draft`;
+      payload = { name, note: noteInput.value || "" };
+    }
+
+    upBtn.disabled = true; upBtn.textContent = "업로드 중…";
+    try {
+      const blob = await EX.exportToBlob({
+        elements,
+        appState: { ...api.getAppState(), exportBackground: true, viewBackgroundColor: "#ffffff" },
+        files: api.getFiles(),
+        mimeType: "image/png",
+        maxWidthOrHeight: 2000,
+      });
+      payload.image = await blobToDataURL(blob);
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || "HTTP " + res.status);
+      }
+      const data = await res.json();
+      toast("저장됨: " + data.path);
+    } catch (e) {
+      console.error(e);
+      toast("업로드 실패: " + e.message);
+    } finally {
+      upBtn.disabled = false; upBtn.textContent = "⬆ 업로드";
+    }
+  }
+
+  // ---------- utils ----------
+  function blobToDataURL(blob) {
+    return new Promise((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onload = () => resolve(fr.result);
+      fr.onerror = reject;
+      fr.readAsDataURL(blob);
+    });
+  }
+  function loadImage(src) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = src;
+    });
+  }
+  let toastTimer;
+  function toast(msg) {
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("show"), 3000);
+  }
+</script>
+</body>
+</html>
