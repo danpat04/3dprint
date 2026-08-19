@@ -46,8 +46,8 @@ from models.camping.cutlery_holder.params import (
 CCMIN = (Align.CENTER, Align.CENTER, Align.MIN)
 CCMAX = (Align.CENTER, Align.CENTER, Align.MAX)
 
-Y0 = -OUT_D / 2                       # 통 뒷면 = 박스 바깥면
-Y_BOX_IN = Y0 - BOX_WALL              # 박스 안쪽면
+Y0 = -OUT_D / 2                       # 통 뒷면 (보강판이 이 바깥에 붙음)
+Y_BOX_IN = Y0 - HOOK_T - BOX_WALL     # 박스 안쪽면 — 박스 바깥면은 보강판에 닿음
 Y_CLAMP_IN = Y_BOX_IN - HOOK_CLR      # 클램프 안쪽 하강벽의 안쪽면
 Y_CLAMP_FACE = Y_CLAMP_IN - HOOK_T    # 안쪽 하강 두께 = HOOK_T (앞쪽과 맞춤)
 TOP = OUT_H + HOOK_RISE               # 후크 최상단 (통 상단보다 HOOK_RISE 위)

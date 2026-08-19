@@ -34,20 +34,36 @@ app = FastAPI(title="modeling feedback tool")
 _current_project: str | None = None
 
 
+def _is_project(p: Path) -> bool:
+    """모델 코드(.py)가 직접 들어 있으면 프로젝트, 아니면 카테고리로 본다."""
+    return any(p.glob("*.py"))
+
+
 def _list_projects() -> list[str]:
+    """평면 + 카테고리 1단계 하위 프로젝트 ("camping/modular_rack" 형태)."""
     if not MODELS_DIR.exists():
         return []
-    names = [
-        p.name
-        for p in MODELS_DIR.iterdir()
-        if p.is_dir() and not p.name.startswith("_") and p.name not in _HIDDEN
-    ]
+    names: list[str] = []
+    for p in MODELS_DIR.iterdir():
+        if not p.is_dir() or p.name.startswith("_") or p.name in _HIDDEN:
+            continue
+        if _is_project(p):
+            names.append(p.name)
+        else:  # 카테고리 → 한 단계 더
+            for q in p.iterdir():
+                if q.is_dir() and not q.name.startswith("_") and _is_project(q):
+                    names.append(f"{p.name}/{q.name}")
     return sorted(names)
 
 
 def _resolve_project(project: str) -> Path:
-    # path traversal 방지: 단순 이름만 허용하고 실제 디렉토리인지 확인
-    if not project or "/" in project or "\\" in project or project.startswith("."):
+    # path traversal 방지: "이름" 또는 "카테고리/이름"만 허용, 실제 디렉토리 확인
+    if (
+        not project
+        or "\\" in project
+        or project.count("/") > 1
+        or any(seg.startswith(".") or not seg for seg in project.split("/"))
+    ):
         raise HTTPException(400, "invalid project name")
     target = (MODELS_DIR / project).resolve()
     if MODELS_DIR.resolve() not in target.parents or not target.is_dir():
@@ -70,10 +86,9 @@ def set_current(body: CurrentBody):
     """finalize_iteration() 이 모델을 뷰어로 push 할 때 호출 → 현재 프로젝트 등록."""
     global _current_project
     name = body.project.strip()
-    if name and (MODELS_DIR / name).is_dir():
-        _current_project = name
-        return {"ok": True, "project": name}
-    raise HTTPException(400, "unknown project")
+    _resolve_project(name)  # 검증 (실패 시 400/404)
+    _current_project = name
+    return {"ok": True, "project": name}
 
 
 @app.get("/feedback/current")

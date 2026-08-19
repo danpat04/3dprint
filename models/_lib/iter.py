@@ -104,7 +104,13 @@ def finalize_iteration(part, *, project_dir: Path | None = None, show_in_viewer:
             show(part, reset_camera=Camera.RESET)
         except Exception as e:
             print(f"[models] show() 실패 (ocp_vscode 컨테이너 미실행?): {e}")
-        _notify_feedback_tool(project_name)
+        # 카테고리 하위 프로젝트는 "camping/modular_rack" 처럼 상대경로로 통지
+        models_root = Path(__file__).resolve().parent.parent
+        try:
+            rel = project_dir.resolve().relative_to(models_root).as_posix()
+        except ValueError:
+            rel = project_name
+        _notify_feedback_tool(rel)
 
     return iter_num
 
