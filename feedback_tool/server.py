@@ -9,6 +9,8 @@ ocp_vscode 뷰어(3939) 앞단의 Caddy 가 `/feedback/*` 를 이 서버(3940)�
   POST /feedback/upload      덧그림 PNG + 메모 저장 → models/<project>/feedback/
   GET  /feedback/health      헬스체크
   GET  /draw                 Excalidraw 드로잉 페이지 (백지 제안 + 캡처 덧그림)
+  GET  /files                export 된 STEP 다운로드 목록 (HTML)
+  GET  /files/{path}         models/**/exports/ 파일 다운로드
   POST /feedback/capture     뷰어 캡처 PNG 임시 저장 → id (draw?bg=<id> 로 전달)
   GET  /feedback/capture/{id}  임시 캡처 PNG 조회
   POST /feedback/draft       백지 스케치 저장 → models/_drafts/<이름>/
@@ -22,7 +24,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from pydantic import BaseModel
 
 MODELS_DIR = Path("/app/models")
@@ -201,6 +203,72 @@ def get_capture(cap_id: str):
     if png is None:
         raise HTTPException(404, "capture not found (expired?)")
     return Response(png, media_type="image/png")
+
+
+# ---------- export 파일 다운로드 (/files) ----------
+
+_DL_EXTS = {".step", ".stl", ".3mf"}
+
+
+def _export_files() -> list[Path]:
+    """models/**/exports/ 아래 다운로드 대상 파일 (카테고리 1단계 포함)."""
+    if not MODELS_DIR.exists():
+        return []
+    found = [
+        p
+        for pattern in ("*/exports/*", "*/*/exports/*")
+        for p in MODELS_DIR.glob(pattern)
+        if p.is_file() and p.suffix.lower() in _DL_EXTS
+    ]
+    return sorted(found)
+
+
+@app.get("/files", response_class=HTMLResponse)
+def files_page():
+    rows = []
+    by_project: dict[str, list[Path]] = {}
+    for p in _export_files():
+        project = str(p.parent.parent.relative_to(MODELS_DIR))
+        by_project.setdefault(project, []).append(p)
+    for project in sorted(by_project):
+        rows.append(f"<h2>📁 {project}</h2><ul>")
+        for p in by_project[project]:
+            rel = p.relative_to(MODELS_DIR).as_posix()
+            kb = p.stat().st_size / 1024
+            mtime = datetime.fromtimestamp(p.stat().st_mtime).strftime("%Y-%m-%d %H:%M")
+            rows.append(
+                f'<li><a href="/files/{rel}" download>{p.name}</a>'
+                f' <small>({kb:,.0f} KB · {mtime})</small></li>'
+            )
+        rows.append("</ul>")
+    body = "\n".join(rows) or "<p>export 된 파일이 없습니다.</p>"
+    return f"""<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8"><title>exports — modeling</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>body{{font-family:system-ui,sans-serif;max-width:720px;margin:24px auto;
+padding:0 16px;background:#1c1c20;color:#eee}}
+h1{{font-size:20px}} h2{{font-size:16px;margin:18px 0 6px;color:#34c759}}
+ul{{margin:4px 0;padding-left:20px}} li{{margin:3px 0}}
+a{{color:#7ab8ff;text-decoration:none}} a:hover{{text-decoration:underline}}
+small{{color:#999}}</style></head>
+<body><h1>⬇ export 파일</h1>
+{body}
+</body></html>"""
+
+
+@app.get("/files/{path:path}")
+def files_download(path: str):
+    if "\\" in path or any(seg.startswith(".") or not seg for seg in path.split("/")):
+        raise HTTPException(400, "invalid path")
+    target = (MODELS_DIR / path).resolve()
+    if (
+        MODELS_DIR.resolve() not in target.parents
+        or "exports" not in target.parent.name
+        or target.suffix.lower() not in _DL_EXTS
+        or not target.is_file()
+    ):
+        raise HTTPException(404, "file not found")
+    return FileResponse(target, filename=target.name)
 
 
 @app.post("/feedback/draft")
