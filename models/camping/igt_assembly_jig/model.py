@@ -17,6 +17,7 @@
 
 from build123d import (
     Align,
+    Axis,
     Box,
     BuildPart,
     BuildSketch,
@@ -24,7 +25,9 @@ from build123d import (
     Mode,
     Plane,
     Polygon,
+    chamfer,
     extrude,
+    fillet,
 )
 
 from models._lib.iter import finalize_iteration
@@ -47,14 +50,19 @@ Y_NARROW = WALL + GAP          # 7
 Y_OUT = WALL + GAP + WALL      # 11 U바닥 바깥 두께
 Z_TAPER = H - GRIP_H           # 50 테이퍼 상단
 
-# ---- 누름 가이드 요철 (넓은 다리 바깥면, 그립 구간 가운데) ----
-# 요철 2줄 사이 3mm 홈에 철판 테두리를 물려 위에서 찍어누르는 가이드
-# + 뽑을 때 손가락 걸리는 그립. 정렬변(x=0) 쪽에 붙여 뉘여 출력 시 베드 접지.
-RIB_L = 15.0       # 요철 길이 (X, 정렬변에서 시작)
-RIB_T = 4.0        # 요철 두께 (Z)
-RIB_P = 10.0       # 돌출 (−Y)
-RIB_CH = 2.0       # 홈 입구 45° 챔퍼 (철판 유도)
-Z_RIB_C = (Z_TAPER + H) / 2    # 85 그립 구간 가운데
+# ---- D-핸들 (넓은 다리 바깥면 −Y, 그립 구간) ----
+# 출력 테스트 결과 누름 요철은 그립에 도움 안 돼 제거(v2). 손가락 2~3개를
+# 면과 바 사이 틈에 끼워 감아쥐는 세로 바 — 수직 인양에 유리.
+# 정렬변(x=0)에 붙여 뉘여 출력 시 베드 접지 (서포트리스).
+HDL_W = 15.0       # 핸들 폭 (X, 정렬변에서 시작)
+HDL_GAP = 30.0     # 손가락 틈 (면 ↔ 바 안쪽) — 장갑 고려
+HDL_BAR = 4.0      # 바 두께 (Y) — 하중은 스트럿으로 빠지는 전단이라 얇게
+HDL_Z0 = 52.0      # 핸들 하단
+HDL_Z1 = 118.0     # 핸들 상단
+HDL_STRUT = 8.0    # 위아래 연결 스트럿 두께 → 창(손가락) 높이 50
+HDL_R_IN = 6.0     # 창 안쪽 코너 필렛
+HDL_R_OUT = 1.5    # 바 바깥 코너 필렛 (바 4mm 안에서)
+HDL_CH = 1.5       # 창 안쪽 테두리 챔퍼 (손가락 닿는 모서리)
 
 
 def build_jig():
@@ -88,28 +96,37 @@ def build_jig():
             )
         extrude(ch.sketch, amount=W_TIP, mode=Mode.SUBTRACT)
 
-        # 누름 가이드 요철 2줄 (아래/위), 사이 홈 = GAP(3mm)
-        z_lo = Z_RIB_C - GAP / 2 - RIB_T   # 79.5 아래 요철 하단
-        z_hi = Z_RIB_C + GAP / 2           # 86.5 위 요철 하단
-        for z0 in (z_lo, z_hi):
-            with Locations((0, -RIB_P, z0)):
-                Box(RIB_L, RIB_P, RIB_T,
-                    align=(Align.MIN, Align.MIN, Align.MIN))
-        # 홈 입구(요철 끝, y=-RIB_P) 45° 챔퍼 — 홈이 3→7mm 로 벌어짐
-        with BuildSketch(Plane.YZ) as rch:
-            Polygon(   # 아래 요철의 홈쪽 모서리
-                (-RIB_P, z_lo + RIB_T),
-                (-RIB_P + RIB_CH, z_lo + RIB_T),
-                (-RIB_P, z_lo + RIB_T - RIB_CH),
+        # D-핸들: YZ 프로파일 C자 (스트럿 2 + 바) → X로 HDL_W 압출
+        y_bar_in = -HDL_GAP                 # 바 안쪽면
+        y_out = -(HDL_GAP + HDL_BAR)        # 바 바깥면
+        with BuildSketch(Plane.YZ) as hp:
+            outline = Polygon(
+                (0.0, HDL_Z0),
+                (y_out, HDL_Z0),
+                (y_out, HDL_Z1),
+                (0.0, HDL_Z1),
+                (0.0, HDL_Z1 - HDL_STRUT),
+                (y_bar_in, HDL_Z1 - HDL_STRUT),
+                (y_bar_in, HDL_Z0 + HDL_STRUT),
+                (0.0, HDL_Z0 + HDL_STRUT),
                 align=None,
             )
-            Polygon(   # 위 요철의 홈쪽 모서리
-                (-RIB_P, z_hi),
-                (-RIB_P + RIB_CH, z_hi),
-                (-RIB_P, z_hi + RIB_CH),
-                align=None,
-            )
-        extrude(rch.sketch, amount=RIB_L, mode=Mode.SUBTRACT)
+            near = lambda v, t: abs(v - t) < 0.01
+            vs = hp.vertices()
+            fillet([v for v in vs if near(v.X, y_bar_in)
+                    and v.Y in (HDL_Z0 + HDL_STRUT, HDL_Z1 - HDL_STRUT)],
+                   HDL_R_IN)
+            fillet([v for v in vs if near(v.X, y_out)], HDL_R_OUT)
+        extrude(hp.sketch, amount=HDL_W)
+
+        # 창 안쪽 테두리(손가락 닿는 모서리) 챔퍼 — x=0/15 양쪽 면의
+        # 창 경계 에지 중 몸체(y=0) 접합부·바깥 프로파일 제외
+        near = lambda v, t: abs(v - t) < 0.01
+        win = [e for e in part.edges()
+               if (near(e.center().X, 0.0) or near(e.center().X, HDL_W))
+               and -(HDL_GAP + 1) < e.center().Y < -1.0
+               and HDL_Z0 + 3 < e.center().Z < HDL_Z1 - 3]
+        chamfer(win, HDL_CH)
 
     return part.part
 
