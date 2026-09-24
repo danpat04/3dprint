@@ -48,8 +48,9 @@ models/                    자율 모델링 영역 (워크플로 정본: models/
     exports/               STEP 출력 (gitignore, 재생성 가능)
     intermediate/          iter 별 PNG/STEP (gitignore)
     feedback/              사용자 덧그림 피드백 (gitignore)
-  coffee/                  카테고리 그룹핑 예: tamper_stand, portafilter_stand, …
-  toy/                     예: bubble (WIP)
+  coffee/                  카테고리 그룹핑: tamper_stand, portafilter_stand, …
+  camping/  house_fix/  toy/
+  _assets/fonts/           양각 글자용 폰트 원본 (fontconfig 등록 필요)
 ```
 
 git 에는 **소스(`*.py`) + `README.md` + `images/` 만** 남고, STEP·중간 PNG·피드백은 `.gitignore` 로 제외한다 (언제든 재생성 가능).
@@ -66,11 +67,33 @@ python -m models.<project>.assembly
 python -m models.<project>.export
 ```
 
-## 모델 목록 (일부)
+## 모델 목록
 
-- **camping/** — cutlery_holder(수저통) · tarp_magnet_holder(타프 자석) · knife_cover(식칼 시스)
-- **coffee/** — tamper_stand · portafilter_stand · feimaobuk_a2_cup · distributor_stand · dutch_knob
-- **mouse_case** — 무선 마우스 여행용 케이스 (자석 결합)
-- **shrimp_scoop · juice_pack_holder · monitor_stand · puck_screen_holder** 등
+| 카테고리 | 모델 |
+|---|---|
+| **camping/** | cutlery_holder(수저통) · tarp_magnet_holder(타프 자석) · knife_cover(식칼 시스) · modular_rack · igt_assembly_jig · igt_press_tool |
+| **coffee/** | tamper_stand · portafilter_stand · feimaobuk_a2_cup · distributor_stand · dutch_knob |
+| **house_fix/** | bracket_base(천장 홈 브라켓) · groove_spacer(홈 메움 스페이서) · drilling_base(드릴링 바닥 보호 지그) |
+| **toy/** | bubble · light_baton |
+| 그 외 | name_tag(양각 네임택) · mouse_case · shrimp_scoop · juice_pack_holder · monitor_stand · puck_screen_holder |
 
 각 모델의 상세 스펙·이미지는 해당 폴더의 `README.md` 참고.
+
+### house_fix — 천장 홈 메움 작업
+
+폭 34 × 깊이 38 × 길이 2519mm 천장 홈을 메우는 일련의 작업.
+금속 클립 + 패널 방식(`bracket_base`)에서 **나무판 + 스페이서** 방식으로 전환했다.
+
+- `groove_spacer` — 홈에 나사로 박는 높이 33.4 스페이서. 4.6mm 나무판과 합쳐 깊이 38 을 채운다
+- `drilling_base` — 그 나무판에 가이드 구멍을 집 안에서 뚫을 때 바닥을 보호하는 지그
+- `bracket_base` — 폐기된 초기 방식. 기록으로 남김
+
+### 폰트가 필요한 모델
+
+`name_tag` 처럼 글자를 새기는 모델은 `models/_assets/fonts/` 의 폰트를 **fontconfig 에
+등록**해야 빌드된다 (`Text(font_path=...)` 로는 OCC 가 못 찾는다):
+
+```bash
+cp models/_assets/fonts/*.otf models/_assets/fonts/*.ttf ~/.local/share/fonts/
+fc-cache -f ~/.local/share/fonts
+```
