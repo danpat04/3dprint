@@ -41,3 +41,14 @@ a.dl { display: block; padding: 6px 14px; font-size: 12px; color: #7ab8ff;
        text-decoration: none; }
 a.dl:hover { background: #22222a; }
 a.dl .when { float: right; color: #6a6a74; font-size: 11px; }
+
+.row { display: flex; align-items: stretch; }
+.row .item { flex: 1; }
+.row.dim .item { color: #5a5a64; }
+.bld { background: none; border: 0; color: #6a6a74; cursor: pointer;
+       padding: 0 10px; font-size: 13px; }
+.bld:hover { color: #34c759; background: #22222a; }
+#log { position: absolute; left: 0; right: 0; bottom: 0; max-height: 40%;
+       overflow: auto; margin: 0; padding: 10px 14px; font-size: 11px;
+       line-height: 1.5; color: #b0b0b8; background: #101014ee;
+       border-top: 1px solid #2a2a30; white-space: pre-wrap; }

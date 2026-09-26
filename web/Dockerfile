@@ -16,9 +16,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
-# 인증은 Caddy forward_auth 가 대행하므로 OAuth 라이브러리가 필요 없다.
+# ocp-vscode 는 뷰어용이 아니라 **models/_lib/iter.py 가 import** 하기 때문에 필요하다.
+# 없으면 모델 모듈을 실행할 수 없다 (show() 자체는 실패해도 무방하게 처리돼 있다).
+# 인증은 Caddy forward_auth 가 대행하므로 OAuth 라이브러리는 필요 없다.
 RUN uv pip install --system --no-cache \
-    build123d "f3d>=3.5.0" \
+    build123d "f3d>=3.5.0" ocp-vscode \
     "fastapi>=0.110" "uvicorn[standard]>=0.29" \
     "httpx>=0.27"
 
@@ -29,6 +31,11 @@ ENV LIBGL_ALWAYS_SOFTWARE=1
 # 빈 명명 볼륨은 마운트 지점의 내용과 **소유권까지** 이미지에서 물려받는다.
 # 이게 없으면 볼륨이 root 소유로 생기고, uid 1000 으로 도는 컨테이너가 못 쓴다.
 RUN mkdir -p /app/cache && chown 1000:1000 /app/cache
+
+# uid 1000 으로 돌 때 홈이 없으면 HOME 이 / 로 잡혀 f3d 가 /.cache 를 만들려다
+# 권한 오류로 죽는다. 쓸 수 있는 홈을 준다.
+RUN mkdir -p /home/app && chown 1000:1000 /home/app
+ENV HOME=/home/app XDG_CACHE_HOME=/home/app/.cache
 
 COPY app/ app/
 

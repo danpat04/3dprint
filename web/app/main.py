@@ -21,7 +21,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
-from app import mesh, projects as P
+from app import build, mesh, projects as P
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 
@@ -52,7 +52,9 @@ def api_project(slug: str):
         raise HTTPException(404, "project not found")
     return {
         **project.as_dict(),
-        "parts": [vars(x) for x in P.list_parts(project)],
+        "parts": [{**{k: v for k, v in vars(x).items() if not k.startswith("_")},
+                   "buildable": x.command is not None}
+                  for x in P.list_parts(project)],
         "artifacts": P.list_artifacts(project),
         "images": sorted(
             p.name for p in (project.path / "images").glob("*.png")
@@ -108,6 +110,45 @@ def mesh_stl(slug: str):
     except Exception as exc:                      # 변환 실패를 그대로 노출
         raise HTTPException(500, f"mesh failed: {exc}") from exc
     return FileResponse(out, media_type="model/stl")
+
+
+@app.on_event("startup")
+async def _startup():
+    build.start()
+
+
+def _find_part(slug: str, part: str):
+    project = P.get_project(slug)
+    if project is None:
+        raise HTTPException(404, "project not found")
+    for p in P.list_parts(project):
+        if p.name == part:
+            return project, p
+    raise HTTPException(404, "part not found")
+
+
+@app.post("/build/{slug:path}")
+def build_part(slug: str):
+    """파트 빌드 요청. slug 는 `<project>/<part>`."""
+    head, _, part = slug.rpartition("/")
+    project, p = _find_part(head, part)
+    cmd = p.command
+    if cmd is None:
+        raise HTTPException(400, "이 파트는 빌드할 방법이 없습니다 (소스 없음)")
+    return build.submit(project.slug, p.name, cmd).as_dict()
+
+
+@app.get("/jobs/{job_id}")
+def job_status(job_id: str):
+    job = build.get(job_id)
+    if job is None:
+        raise HTTPException(404, "job not found")
+    return job.as_dict()
+
+
+@app.get("/jobs")
+def jobs(slug: str | None = None):
+    return build.recent(slug)
 
 
 @app.get("/health")

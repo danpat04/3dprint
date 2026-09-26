@@ -39,6 +39,19 @@ class Part:
     source: str                  # 어떤 규약으로 찾았는지 (진단용)
     module: str | None = None    # 실행 가능한 모듈 경로 (있으면)
     artifact: str | None = None  # exports/ 안 파일명 (있으면)
+    _export_module: str | None = None
+
+    @property
+    def command(self) -> list[str] | None:
+        """이 파트를 다시 만드는 명령. 없으면 빌드 불가.
+
+        클라이언트가 보낸 문자열을 쓰지 않고 **서버가 탐색한 결과로만** 만든다.
+        """
+        if self.module:
+            return ["python", "-m", self.module]
+        if self.source == "export.py" and self._export_module:
+            return ["python", "-m", self._export_module]
+        return None
 
 
 @dataclass
@@ -158,7 +171,9 @@ def list_parts(project: Project) -> list[Part]:
                 export_py.read_text(encoding="utf-8"), {"PARTS", "parts"}):
             if key not in seen:
                 seen.add(key)
-                parts.append(Part(name=key, source="export.py"))
+                part = Part(name=key, source="export.py")
+                part._export_module = f"models.{project.slug.replace('/', '.')}.export"
+                parts.append(part)
 
     for py in sorted(project.path.glob("*.py")):
         if py.name in ("export.py", "params.py", "__init__.py"):

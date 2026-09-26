@@ -106,19 +106,65 @@ document.getElementById('me').textContent =
 const haveStep = new Set(
   data.artifacts.filter(a => a.name.endsWith('.step')).map(a => a.name.slice(0, -5)));
 
-document.getElementById('parts').innerHTML = data.parts.map(p => {
-  const ready = haveStep.has(p.name);
-  return `<button class="item" data-part="${p.name}" ${ready ? '' : 'disabled'}>
-    ${p.name}<span class="tag">${ready ? p.source : '빌드 필요'}</span></button>`;
-}).join('');
+function renderParts(parts, have) {
+  document.getElementById('parts').innerHTML = parts.map(p => {
+    const ready = have.has(p.name);
+    return `<div class="row${ready ? '' : ' dim'}">
+      <button class="item" data-part="${p.name}" ${ready ? '' : 'disabled'}
+        >${p.name}<span class="tag">${ready ? p.source : '미출력'}</span></button>
+      ${p.buildable ? `<button class="bld" data-build="${p.name}"
+        title="다시 빌드">⟳</button>` : ''}
+    </div>`;
+  }).join('');
+}
+renderParts(data.parts, haveStep);
 
-document.getElementById('files').innerHTML = data.artifacts.map(a => `
-  <a class="dl" href="dl/${slug}/${a.name}" download>
-    ${a.name}<span class="when" title="${new Date(a.mtime).toLocaleString('ko-KR')}">
-      ${kb(a.size)} · ${relative(a.mtime)}</span></a>`).join('')
-  || '<div class="sec">없음</div>';
+function renderFiles(artifacts) {
+  document.getElementById('files').innerHTML = artifacts.map(a => `
+    <a class="dl" href="dl/${slug}/${a.name}" download>
+      ${a.name}<span class="when" title="${new Date(a.mtime).toLocaleString('ko-KR')}">
+        ${kb(a.size)} · ${relative(a.mtime)}</span></a>`).join('')
+    || '<div class="sec">없음</div>';
+}
+renderFiles(data.artifacts);
+
+// ---- 빌드 ----
+const logBox = document.getElementById('log');
+
+async function runBuild(part) {
+  logBox.hidden = false;
+  logBox.textContent = `${part} 빌드 요청…`;
+  const res = await fetch(`build/${slug}/${part}`, { method: 'POST' });
+  if (!res.ok) {
+    logBox.textContent = `빌드 불가: ${(await res.json()).detail}`;
+    return;
+  }
+  const { id } = await res.json();
+  while (true) {
+    await new Promise(r => setTimeout(r, 1000));
+    const job = await (await fetch(`jobs/${id}`)).json();
+    logBox.textContent =
+      `[${job.status}] ${part}\n` + job.log.slice(-14).join('\n');
+    logBox.scrollTop = logBox.scrollHeight;
+    if (job.status === 'done' || job.status === 'failed') {
+      if (job.status === 'done') {
+        // 새 STEP 이 생겼을 수 있으니 목록과 뷰를 갱신
+        const fresh = await (await fetch(`api/projects/${slug}`)).json();
+        const have = new Set(fresh.artifacts
+          .filter(a => a.name.endsWith('.step')).map(a => a.name.slice(0, -5)));
+        renderParts(fresh.parts, have);
+        renderFiles(fresh.artifacts);
+        const btn = document.querySelector(`.item[data-part="${part}"]`);
+        if (btn && !btn.disabled) { btn.classList.add('on'); show(part); }
+      }
+      return;
+    }
+  }
+}
 
 document.getElementById('parts').addEventListener('click', e => {
+  const bld = e.target.closest('.bld');
+  if (bld) { runBuild(bld.dataset.build); return; }
   const btn = e.target.closest('.item');
   if (!btn || btn.disabled) return;
   document.querySelectorAll('.item').forEach(b => b.classList.remove('on'));
