@@ -104,7 +104,7 @@ def build_rib_right():
         # A 십자 맞춤 홈 — 위팔 **밑면**에서 절반 깊이만 판다 (아래로 열림).
         # 리브가 커넥터 위에 올라앉아 하중이 맞물림을 눌러준다.
         _box(GAP / 2 - 1, GAP / 2 + RIB_T + 1,
-             A_Y[0] - LAP_FIT, A_Y[1] + LAP_FIT,
+             A_Y[0] - RIB_NOTCH_FIT, A_Y[1] + RIB_NOTCH_FIT,
              SLOT_H - 1, SLOT_H + LAP_D, mode=Mode.SUBTRACT)
     return part.part
 
@@ -121,13 +121,20 @@ def _rib_x(sgn):
 
 
 def build_connector_a():
-    """A — 선반 위 십자 맞춤. 리브가 이 위에 올라앉는다 (윗면을 절반 판다)."""
+    """A — 선반 위 십자 맞춤. 리브가 이 위에 올라앉는다 (윗면을 절반 판다).
+
+    유격은 **커넥터 치수로만** 맞춘다 — 리브에 이미 파인 홈(12.30)은 건드리지 않고
+    몸통을 그만큼 두껍게, 홈을 그만큼 좁게 해서 한쪽 LAP_FIT 을 달성한다.
+    """
     x_out = GAP / 2 + RIB_T + A_OVER
+    # 리브 홈(12 + 2×RIB_NOTCH_FIT) 안에서 한쪽 LAP_FIT 만 남기는 몸통 폭
+    by0 = A_Y[0] - RIB_NOTCH_FIT + LAP_FIT
+    by1 = A_Y[1] + RIB_NOTCH_FIT - LAP_FIT
     with BuildPart() as part:
-        _box(-x_out, x_out, A_Y[0], A_Y[1], SLOT_H, SLOT_H + A_H)
+        _box(-x_out, x_out, by0, by1, SLOT_H, SLOT_H + A_H)
         for sgn in (-1, 1):
             x0, x1 = _rib_x(sgn)
-            _box(x0 - LAP_FIT, x1 + LAP_FIT, A_Y[0] - 1, A_Y[1] + 1,
+            _box(x0 - LAP_FIT, x1 + LAP_FIT, by0 - 1, by1 + 1,
                  SLOT_H + LAP_D, SLOT_H + A_H + 1, mode=Mode.SUBTRACT)
     return part.part
 
