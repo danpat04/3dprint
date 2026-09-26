@@ -45,6 +45,20 @@ def api_projects():
     return [p.as_dict() for p in P.iter_projects()]
 
 
+@app.get("/api/categories")
+def api_categories():
+    return P.categories()
+
+
+@app.post("/api/projects")
+def api_create(name: str = Body(...), category: str | None = Body(None)):
+    try:
+        project = P.create(category or None, name)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return project.as_dict()
+
+
 @app.get("/api/projects/{slug:path}")
 def api_project(slug: str):
     """프로젝트 상세 — 파트 목록 + export 파일."""

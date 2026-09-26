@@ -7,8 +7,18 @@
 </head><body>
 <header>
   <h1>프로젝트</h1>
+  <button id="new" class="act">+ 새 프로젝트</button>
   <span id="me" class="muted"></span>
 </header>
-<main><div id="list" class="muted">불러오는 중…</div></main>
+<main>
+  <form id="form" hidden>
+    <select id="cat"></select>
+    <input id="newcat" placeholder="새 카테고리" hidden>
+    <input id="name" placeholder="프로젝트 이름 (소문자·밑줄)" autocomplete="off">
+    <button type="submit">만들기</button>
+    <span id="err" class="err"></span>
+  </form>
+  <div id="list" class="muted">불러오는 중…</div>
+</main>
 <script src="static/app.js"></script>
 </body></html>

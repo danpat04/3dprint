@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import ast
 import os
+import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -117,8 +118,10 @@ def iter_projects() -> list[Project]:
     for d in sorted(MODELS_DIR.iterdir()):
         if not d.is_dir() or d.name in _SKIP or d.name.startswith("."):
             continue
-        # 1단계: 바로 프로젝트인가 (.py 가 있으면)
-        if any(p.suffix == ".py" for p in d.glob("*.py")):
+        # 1단계: 바로 프로젝트인가.
+        # README.md 도 인정한다 — 새로 만든 프로젝트는 아직 .py 가 없다.
+        # 카테고리 디렉토리에는 README.md 가 없어서 오인할 일이 없다 (확인함).
+        if _is_project(d):
             found.append(_load(d, category=None))
             continue
         # 2단계: 카테고리 디렉토리
@@ -128,6 +131,10 @@ def iter_projects() -> list[Project]:
     found.sort(key=lambda p: p.updated or datetime.min.replace(tzinfo=timezone.utc),
                reverse=True)
     return found
+
+
+def _is_project(d: Path) -> bool:
+    return any(d.glob("*.py")) or (d / "README.md").is_file()
 
 
 def _load(path: Path, category: str | None) -> Project:
@@ -199,6 +206,51 @@ def list_parts(project: Project) -> list[Part]:
                 parts.append(Part(name=stem, source="exports", artifact=fname))
 
     return parts
+
+
+_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9_]{1,48}$")
+
+README_SKELETON = """# {name} — 
+
+## 목적/용도
+
+## 치수/제약
+
+| 항목 | 값 | 근거 |
+|---|---|---|
+
+## acceptance criteria
+
+## 재료/공정
+
+## 상태
+
+- (작성 중)
+"""
+
+
+def create(category: str | None, name: str) -> Project:
+    """새 프로젝트 뼈대. 디렉토리 + README 골격만 만든다.
+
+    실제 모델링은 대화로 진행되므로 model.py 는 여기서 만들지 않는다.
+    """
+    if not _NAME_RE.match(name or ""):
+        raise ValueError("이름은 소문자·숫자·밑줄만, 2~49자")
+    if category and not _NAME_RE.match(category):
+        raise ValueError("카테고리 형식이 올바르지 않습니다")
+    path = MODELS_DIR / (f"{category}/{name}" if category else name)
+    if path.exists():
+        raise ValueError("이미 있는 프로젝트입니다")
+    path.mkdir(parents=True)
+    (path / "README.md").write_text(README_SKELETON.format(name=name),
+                                    encoding="utf-8")
+    slug = path.relative_to(MODELS_DIR).as_posix()
+    return _load(path, category)
+
+
+def categories() -> list[str]:
+    """이미 쓰이고 있는 카테고리 목록."""
+    return sorted({p.category for p in iter_projects() if p.category})
 
 
 def list_artifacts(project: Project) -> list[dict]:
