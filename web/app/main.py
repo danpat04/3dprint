@@ -17,11 +17,12 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import Body, FastAPI, HTTPException, Request
+from fastapi.responses import Response
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
-from app import build, mesh, projects as P
+from app import build, mesh, notes, projects as P
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 
@@ -149,6 +150,49 @@ def job_status(job_id: str):
 @app.get("/jobs")
 def jobs(slug: str | None = None):
     return build.recent(slug)
+
+
+# ---------- 피드백 · 드래프트 ----------
+
+@app.post("/capture")
+def capture(image: str = Body(..., embed=True)):
+    """3D 뷰 캡처를 임시 보관하고 id 를 준다. 그리기 페이지가 배경으로 쓴다."""
+    try:
+        return {"id": notes.put_capture(notes.decode_png(image))}
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.get("/capture/{cap_id}")
+def capture_get(cap_id: str):
+    png = notes.get_capture(cap_id)
+    if png is None:
+        raise HTTPException(404, "만료되었거나 없는 캡처")
+    return Response(png, media_type="image/png")
+
+
+@app.post("/note/{slug:path}")
+def save_note(slug: str, kind: str = Body(...), image: str = Body(...),
+              note: str = Body(""), part: str | None = Body(None),
+              name: str = Body("")):
+    """피드백/드래프트 저장. 프로젝트는 URL 에서 오므로 고를 필요가 없다."""
+    project = P.get_project(slug)
+    if project is None:
+        raise HTTPException(404, "project not found")
+    try:
+        png = notes.decode_png(image)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    if kind == "feedback":
+        return {"path": notes.save_feedback(project, png, note, part)}
+    if kind == "draft":
+        return {"path": notes.save_draft(project, png, note, name)}
+    raise HTTPException(400, "kind 는 feedback 또는 draft")
+
+
+@app.get("/draw", response_class=HTMLResponse)
+def draw_page():
+    return _page("draw.html")
 
 
 @app.get("/health")

@@ -17,7 +17,9 @@ const kb = n => (n / 1024).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + ' 
 // ---- 뷰어 ----
 const cv = document.getElementById('cv');
 const hint = document.getElementById('hint');
-const renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true });
+// preserveDrawingBuffer 가 없으면 toDataURL 이 빈 이미지를 준다 (프레임 후 버퍼가 비워짐)
+const renderer = new THREE.WebGLRenderer({
+  canvas: cv, antialias: true, preserveDrawingBuffer: true });
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x16161a);
 const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 20000);
@@ -186,6 +188,23 @@ document.getElementById('parts').addEventListener('click', e => {
   btn.classList.add('on');
   show(selected);
 });
+
+// ---- 피드백 · 드래프트 ----
+// 프로젝트/파트가 URL 에 이미 있으므로 그리기 페이지에서 고를 일이 없다.
+document.getElementById('fb').onclick = async () => {
+  if (!current) { alert('먼저 파트를 선택하세요'); return; }
+  renderer.render(scene, camera);                 // 캔버스를 확실히 채우고 캡처
+  const image = cv.toDataURL('image/png');
+  const res = await fetch('capture', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ image }),
+  });
+  const { id } = await res.json();
+  location.href = `draw?p=${slug}&part=${selected || ''}&bg=${id}`;
+};
+document.getElementById('df').onclick = () => {
+  location.href = `draw?p=${slug}`;
+};
 
 resize();
 // 첫 파트를 자동으로 띄운다

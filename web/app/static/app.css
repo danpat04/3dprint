@@ -55,3 +55,8 @@ a.dl .when { float: right; color: #6a6a74; font-size: 11px; }
 .row.busy .tag { color: #34c759; }
 .row.busy .item { color: #e8e8ea; }
 .bld:disabled { color: #3a3a44; cursor: default; background: none; }
+.act { background: #23232b; border: 1px solid #33333d; color: #d8d8dc;
+        border-radius: 6px; padding: 5px 11px; font: inherit; font-size: 12px;
+        cursor: pointer; }
+.act:hover { border-color: #3d7dff; color: #fff; }
+header h1 { flex: 1; }
