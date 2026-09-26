@@ -106,14 +106,20 @@ document.getElementById('me').textContent =
 const haveStep = new Set(
   data.artifacts.filter(a => a.name.endsWith('.step')).map(a => a.name.slice(0, -5)));
 
+let selected = null;
+let building = null;
+
 function renderParts(parts, have) {
   document.getElementById('parts').innerHTML = parts.map(p => {
     const ready = have.has(p.name);
-    return `<div class="row${ready ? '' : ' dim'}">
-      <button class="item" data-part="${p.name}" ${ready ? '' : 'disabled'}
-        >${p.name}<span class="tag">${ready ? p.source : '미출력'}</span></button>
+    const busy = building === p.name;
+    const tag = busy ? '빌드 중…' : (ready ? p.source : '미출력');
+    return `<div class="row${ready ? '' : ' dim'}${busy ? ' busy' : ''}">
+      <button class="item${selected === p.name ? ' on' : ''}"
+        data-part="${p.name}" ${ready ? '' : 'disabled'}
+        >${p.name}<span class="tag">${tag}</span></button>
       ${p.buildable ? `<button class="bld" data-build="${p.name}"
-        title="다시 빌드">⟳</button>` : ''}
+        ${building ? 'disabled' : ''} title="다시 빌드">⟳</button>` : ''}
     </div>`;
   }).join('');
 }
@@ -131,34 +137,42 @@ renderFiles(data.artifacts);
 // ---- 빌드 ----
 const logBox = document.getElementById('log');
 
+async function refresh() {
+  const fresh = await (await fetch(`api/projects/${slug}`)).json();
+  const have = new Set(fresh.artifacts
+    .filter(a => a.name.endsWith('.step')).map(a => a.name.slice(0, -5)));
+  renderParts(fresh.parts, have);
+  renderFiles(fresh.artifacts);
+  return have;
+}
+
 async function runBuild(part) {
+  if (building) return;                 // 동시에 하나만
+  building = part;
+  await refresh();                      // "빌드 중…" 표시
   logBox.hidden = false;
   logBox.textContent = `${part} 빌드 요청…`;
-  const res = await fetch(`build/${slug}/${part}`, { method: 'POST' });
-  if (!res.ok) {
-    logBox.textContent = `빌드 불가: ${(await res.json()).detail}`;
-    return;
-  }
-  const { id } = await res.json();
-  while (true) {
-    await new Promise(r => setTimeout(r, 1000));
-    const job = await (await fetch(`jobs/${id}`)).json();
-    logBox.textContent =
-      `[${job.status}] ${part}\n` + job.log.slice(-14).join('\n');
-    logBox.scrollTop = logBox.scrollHeight;
-    if (job.status === 'done' || job.status === 'failed') {
-      if (job.status === 'done') {
-        // 새 STEP 이 생겼을 수 있으니 목록과 뷰를 갱신
-        const fresh = await (await fetch(`api/projects/${slug}`)).json();
-        const have = new Set(fresh.artifacts
-          .filter(a => a.name.endsWith('.step')).map(a => a.name.slice(0, -5)));
-        renderParts(fresh.parts, have);
-        renderFiles(fresh.artifacts);
-        const btn = document.querySelector(`.item[data-part="${part}"]`);
-        if (btn && !btn.disabled) { btn.classList.add('on'); show(part); }
-      }
+  try {
+    const res = await fetch(`build/${slug}/${part}`, { method: 'POST' });
+    if (!res.ok) {
+      logBox.textContent = `빌드 불가: ${(await res.json()).detail}`;
       return;
     }
+    const { id } = await res.json();
+    let job;
+    do {
+      await new Promise(r => setTimeout(r, 1000));
+      job = await (await fetch(`jobs/${id}`)).json();
+      logBox.textContent =
+        `[${job.status}] ${part}\n` + job.log.slice(-14).join('\n');
+      logBox.scrollTop = logBox.scrollHeight;
+    } while (job.status === 'queued' || job.status === 'running');
+    if (job.status === 'done') selected = part;
+  } finally {
+    // 성공이든 실패든 같은 경로로 되돌린다 — 상태를 손으로 복원하지 않는다
+    building = null;
+    const have = await refresh();
+    if (selected && have.has(selected)) show(selected);
   }
 }
 
@@ -167,11 +181,12 @@ document.getElementById('parts').addEventListener('click', e => {
   if (bld) { runBuild(bld.dataset.build); return; }
   const btn = e.target.closest('.item');
   if (!btn || btn.disabled) return;
+  selected = btn.dataset.part;
   document.querySelectorAll('.item').forEach(b => b.classList.remove('on'));
   btn.classList.add('on');
-  show(btn.dataset.part);
+  show(selected);
 });
 
 resize();
 // 첫 파트를 자동으로 띄운다
-document.querySelector('.item:not([disabled])')?.click();
+document.querySelector('.row:not(.dim) .item')?.click();

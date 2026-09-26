@@ -52,3 +52,6 @@ a.dl .when { float: right; color: #6a6a74; font-size: 11px; }
        overflow: auto; margin: 0; padding: 10px 14px; font-size: 11px;
        line-height: 1.5; color: #b0b0b8; background: #101014ee;
        border-top: 1px solid #2a2a30; white-space: pre-wrap; }
+.row.busy .tag { color: #34c759; }
+.row.busy .item { color: #e8e8ea; }
+.bld:disabled { color: #3a3a44; cursor: default; background: none; }
