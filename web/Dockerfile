@@ -16,10 +16,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
+# 인증은 Caddy forward_auth 가 대행하므로 OAuth 라이브러리가 필요 없다.
 RUN uv pip install --system --no-cache \
     build123d "f3d>=3.5.0" \
     "fastapi>=0.110" "uvicorn[standard]>=0.29" \
-    "authlib>=1.3" "httpx>=0.27" "itsdangerous>=2.1"
+    "httpx>=0.27"
 
 # 소프트웨어 렌더링 강제 (GPU 없는 컨테이너)
 ENV LIBGL_ALWAYS_SOFTWARE=1

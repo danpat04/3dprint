@@ -1,0 +1,17 @@
+:root { color-scheme: dark; }
+* { box-sizing: border-box; }
+body { font-family: system-ui, -apple-system, sans-serif; margin: 0;
+       background: #16161a; color: #e8e8ea; }
+header { display: flex; align-items: baseline; gap: 12px;
+         padding: 18px 20px; border-bottom: 1px solid #2a2a30; }
+h1 { font-size: 18px; margin: 0; }
+main { max-width: 860px; margin: 0 auto; padding: 20px; }
+.muted { color: #8a8a94; font-size: 13px; }
+.card { display: block; padding: 12px 14px; margin-bottom: 8px;
+        border: 1px solid #2a2a30; border-radius: 8px;
+        background: #1c1c21; text-decoration: none; color: inherit; }
+.card:hover { border-color: #3d7dff; }
+.card .name { font-size: 15px; font-weight: 600; }
+.card .cat { color: #34c759; font-size: 12px; margin-right: 6px; }
+.card .title { color: #b0b0b8; font-size: 13px; margin-top: 2px; }
+.card .when { float: right; }

@@ -24,7 +24,7 @@
 | 항목 | 결정 |
 |---|---|
 | 배포 | `/v2` 새 컨테이너. 완성 후 기존 대체 |
-| 인증 | **Google OAuth + 이메일 화이트리스트** (공개 도메인이므로 필수) |
+| 인증 | **Caddy forward_auth + oauth2-proxy** (앱에는 인증 코드 0줄) |
 | 뷰어 | **자체 three.js 뷰어**. 막히면 ocp_vscode iframe 으로 후퇴 |
 | 컨테이너 | build123d + f3d + FastAPI **통합 이미지** |
 | 파트 목록 | 자동 탐색 + 폴백으로 시작, 손대는 프로젝트만 매니페스트로 이관 |
@@ -37,6 +37,22 @@
 서버가 사용자 코드를 실행한다는 뜻이고, 공개 도메인에서 무인증이면 누구나
 코드를 실행하고 파일을 쓸 수 있다. 지금은 읽기 전용이라 최악이어도 STEP 유출이지만,
 실행이 붙는 순간 성격이 달라진다. **빌드 트리거보다 인증이 먼저다.**
+
+**구현은 앱이 아니라 Caddy 에 뒀다.** 이 서버에는 서비스가 10 개가 넘는다.
+앱마다 OAuth 를 붙이면 그 수만큼 구현·갱신·보안 책임이 생긴다.
+`forward_auth` 로 Caddy 가 대행하면 **새 서비스는 설정 한 줄로 보호**되고,
+앱은 통과된 요청의 헤더에서 이메일만 읽으면 된다.
+
+  구성: `~/tools/auth/` (oauth2-proxy) + `~/tools/caddy/sites/auth.caddy`
+  구글 리디렉션 URI 는 `https://auth.danp.at/oauth2/callback` **하나뿐**이다.
+  쿠키 도메인이 `.danp.at` 이라 모든 하위 도메인이 세션을 공유한다.
+
+  앱이 받는 헤더: `X-Auth-Request-Email`, `X-Auth-Request-User`
+
+> 구글 동의 화면은 **테스트 상태로 둔다.** 게시하려면 대표 URL 등 브랜딩이 필요한데,
+> oauth2-proxy 가 refresh token 을 쓰지 않고(`refresh:disabled`) 자체 쿠키를 168h
+> 유지하므로 7 일 제한의 체감이 없다. 제약은 테스트 사용자 100 명 한도와
+> 계정 추가를 두 곳(구글 테스트 사용자 + `emails.txt`)에 해야 한다는 것뿐이다.
 
 ### 컨테이너를 합치는 이유
 
@@ -62,7 +78,7 @@ ocp_vscode 뷰어는 **전역 상태가 하나**다. 좌측 목록에서 파트�
 
 | 단계 | 내용 | 상태 |
 |---|---|---|
-| **1** | 통합 컨테이너 + OAuth + 프로젝트 목록/상세 API | 진행 중 |
+| **1** | 통합 컨테이너 + 인증 + 프로젝트 목록/상세 API | 진행 중 |
 | 2 | 프로젝트 페이지 골격 + STL 캐시 three.js 뷰어 | |
 | 3 | 빌드 트리거 (잡 큐 + 진행 표시) | |
 | 4 | 피드백·드래프트를 프로젝트/파트/iter 에 귀속, 클립보드 붙여넣기 | |
@@ -78,7 +94,6 @@ web/
   Dockerfile           build123d + f3d + FastAPI 통합
   app/
     main.py            FastAPI 진입점 (root_path=/v2)
-    auth.py            Google OAuth + 화이트리스트
     projects.py        프로젝트/파트 탐색
     build.py           빌드 잡 큐          (3 단계)
     static/            프런트엔드
@@ -99,17 +114,12 @@ web/
 `model.py` 단일 / `export.py` 의 `PARTS` / 구형 `parts` 딕셔너리.
 한 번에 통일하지 않고 폴백으로 흡수한다.
 
-## 사용자 준비물
+## 계정 추가
 
-1 단계를 마치려면 **Google OAuth 클라이언트**가 필요하다 (내가 만들 수 없다).
+1. Google Cloud Console → OAuth 동의 화면 → **테스트 사용자**에 추가
+2. `~/tools/auth/emails.txt` 에 한 줄 추가 후 `docker compose restart oauth2-proxy`
 
-1. [Google Cloud Console](https://console.cloud.google.com/) → 프로젝트 생성
-2. **API 및 서비스 → OAuth 동의 화면** → 외부 → 앱 이름·지원 이메일 입력
-3. **사용자 인증 정보 → 사용자 인증 정보 만들기 → OAuth 클라이언트 ID**
-   - 유형: **웹 애플리케이션**
-   - 승인된 리디렉션 URI: `https://3d.danp.at/v2/auth/callback`
-4. 발급된 **클라이언트 ID / 보안 비밀**과 **허용할 이메일 목록**을 알려주면
-   `.env` 로 주입한다 (git 에는 올리지 않는다)
+두 곳 모두 필요하다. 하나라도 빠지면 로그인이 거부된다.
 
 ---
 
@@ -136,3 +146,15 @@ libosmesa6` 등)를 넣으니 기본 백엔드로 렌더된다. `LIBGL_ALWAYS_SO
 
 **탐색은 코드를 실행하지 않는다** — AST 파싱으로 딕셔너리 키만 읽는다.
 import 하면 그 자체가 임의 코드 실행이 된다.
+
+**인증 — Caddy 로 이관.** 앱에 OAuth 를 넣는 대신 `forward_auth` 로 Caddy 가 대행한다.
+서비스가 10 개 넘는 서버라 앱마다 붙이면 그 수만큼 보안 책임이 생긴다.
+새 서비스는 `import require_auth` 한 줄로 보호된다.
+
+**1 단계 완료.** 통합 컨테이너가 24 개 프로젝트를 인식하고 `/v2` 로 서빙된다.
+시각은 서버가 UTC ISO 로만 내보내고 표기는 브라우저가 로컬/상대 시간으로 그린다
+(0 단계 항목을 여기서 흡수).
+
+### 2 단계 — 프로젝트 페이지 + 뷰어
+
+다음 작업. 좌측 파트 목록 / 우측 3D 뷰, STEP → STL 변환 캐시, three.js 뷰어.

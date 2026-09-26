@@ -1,4 +1,20 @@
 services:
+  # v2 — 프로젝트 중심 도구 (개발 중). 완성되면 viewer/feedback 을 대체한다.
+  # build123d + f3d + FastAPI 통합. 인증은 Caddy forward_auth 가 대행한다.
+  web:
+    build: ./web
+    image: modeling-web:v2
+    ports:
+      - "127.0.0.1:3941:3941"
+    volumes:
+      - ./models:/app/models
+    environment:
+      - MODELS_DIR=/app/models
+      - ROOT_PATH=/v2
+    # 컨테이너가 쓴 파일이 root 소유가 되면 호스트에서 정리할 수 없다
+    user: "1000:1000"
+    restart: unless-stopped
+
   viewer:
     build: .
     ports:
