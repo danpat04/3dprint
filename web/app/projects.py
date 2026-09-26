@@ -208,7 +208,11 @@ def list_parts(project: Project) -> list[Part]:
     return parts
 
 
-_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9_]{1,48}$")
+# 디렉토리명이자 **파이썬 모듈 경로**가 된다 (빌드가 `python -m models.<이름>...`).
+# 파이썬 3 은 유니코드 식별자를 허용해 한글 모듈도 import 된다 (컨테이너에서 확인).
+# 앞머리 _ 는 막는다 — _lib/_drafts/_assets 처럼 탐색에서 제외되는 이름이라
+# 만들자마자 목록에서 사라진다.
+_NAME_RE = re.compile(r"^[a-z0-9가-힣][a-z0-9가-힣_]{1,48}$")
 
 README_SKELETON = """# {name} — 
 
@@ -235,7 +239,7 @@ def create(category: str | None, name: str) -> Project:
     실제 모델링은 대화로 진행되므로 model.py 는 여기서 만들지 않는다.
     """
     if not _NAME_RE.match(name or ""):
-        raise ValueError("이름은 소문자·숫자·밑줄만, 2~49자")
+        raise ValueError("이름은 한글·소문자·숫자·밑줄만, 2~49자 (앞머리 _ 불가)")
     if category and not _NAME_RE.match(category):
         raise ValueError("카테고리 형식이 올바르지 않습니다")
     path = MODELS_DIR / (f"{category}/{name}" if category else name)

@@ -1,3 +1,8 @@
+// 한글 프로젝트/파트 이름을 URL 에 쓰려면 조각별로 인코딩해야 한다.
+// slug 안의 '/' 는 경로 구분자라 인코딩하면 안 된다.
+const enc = encodeURIComponent;
+const encPath = p => String(p).split('/').map(enc).join('/');
+
 // 시각은 서버가 UTC ISO 로만 내보낸다. 표기는 여기서 브라우저 로컬로 그린다.
 const rtf = new Intl.RelativeTimeFormat('ko', { numeric: 'auto' });
 const UNITS = [['year',31536000],['month',2592000],['day',86400],
@@ -43,7 +48,7 @@ function render(projects) {
           >${newest ? relative(newest) : ''}</span>
       </button>
       <div class="gbody">${items.map(p => `
-        <a class="card" href="p/${p.slug}">
+        <a class="card" href="p/${encPath(p.slug)}">
           <span class="when muted" title="${p.updated ? localTime(p.updated) : ''}"
             >${p.updated ? relative(p.updated) : ''}</span>
           <div class="name">${p.name}</div>

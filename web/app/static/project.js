@@ -1,3 +1,8 @@
+// 한글 프로젝트/파트 이름을 URL 에 쓰려면 조각별로 인코딩해야 한다.
+// slug 안의 '/' 는 경로 구분자라 인코딩하면 안 된다.
+const enc = encodeURIComponent;
+const encPath = p => String(p).split('/').map(enc).join('/');
+
 // 프로젝트 페이지 — 좌: 파트 목록, 우: three.js STL 뷰어
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -95,14 +100,14 @@ function clearMeshes() {
 
 async function show(part) {
   hint.textContent = '불러오는 중…';
-  const info = await fetch(`meshinfo/${slug}/${part}`);
+  const info = await fetch(`meshinfo/${encPath(slug)}/${enc(part)}`);
   if (!info.ok) { hint.textContent = '아직 export 되지 않았습니다'; return; }
   const { solids } = await info.json();
   const loader = new STLLoader();
   const group = new THREE.Group();
   const meshes = [];
   for (const s of solids) {
-    const res = await fetch(`mesh/${slug}/${part}/${s.index}`);
+    const res = await fetch(`mesh/${encPath(slug)}/${enc(part)}/${s.index}`);
     if (!res.ok) continue;
     const geo = loader.parse(await res.arrayBuffer());
     geo.computeVertexNormals();
@@ -141,7 +146,7 @@ function renderSolids(solids, meshes) {
 })();
 
 // ---- 목록 ----
-const data = await (await fetch(`api/projects/${slug}`)).json();
+const data = await (await fetch(`api/projects/${encPath(slug)}`)).json();
 document.getElementById('ptitle').textContent = data.title || data.name;
 document.getElementById('me').textContent =
   (await (await fetch('api/me')).json()).email || '(로컬)';
@@ -170,7 +175,7 @@ renderParts(data.parts, haveStep);
 
 function renderFiles(artifacts) {
   document.getElementById('files').innerHTML = artifacts.map(a => `
-    <a class="dl" href="dl/${slug}/${a.name}" download>
+    <a class="dl" href="dl/${encPath(slug)}/${enc(a.name)}" download>
       ${a.name}<span class="when" title="${new Date(a.mtime).toLocaleString('ko-KR')}">
         ${kb(a.size)} · ${relative(a.mtime)}</span></a>`).join('')
     || '<div class="sec">없음</div>';
@@ -181,7 +186,7 @@ renderFiles(data.artifacts);
 const logBox = document.getElementById('log');
 
 async function refresh() {
-  const fresh = await (await fetch(`api/projects/${slug}`)).json();
+  const fresh = await (await fetch(`api/projects/${encPath(slug)}`)).json();
   const have = new Set(fresh.artifacts
     .filter(a => a.name.endsWith('.step')).map(a => a.name.slice(0, -5)));
   renderParts(fresh.parts, have);
@@ -196,7 +201,7 @@ async function runBuild(part) {
   logBox.hidden = false;
   logBox.textContent = `${part} 빌드 요청…`;
   try {
-    const res = await fetch(`build/${slug}/${part}`, { method: 'POST' });
+    const res = await fetch(`build/${encPath(slug)}/${enc(part)}`, { method: 'POST' });
     if (!res.ok) {
       logBox.textContent = `빌드 불가: ${(await res.json()).detail}`;
       return;
@@ -236,7 +241,7 @@ let rev = null;
 setInterval(async () => {
   if (building) return;                   // 빌드 중엔 그쪽이 갱신을 맡는다
   try {
-    const r = (await (await fetch(`rev/${slug}`)).json()).rev;
+    const r = (await (await fetch(`rev/${encPath(slug)}`)).json()).rev;
     if (rev === null) { rev = r; return; }
     if (r !== rev) {
       rev = r;
@@ -257,10 +262,10 @@ document.getElementById('fb').onclick = async () => {
     body: JSON.stringify({ image }),
   });
   const { id } = await res.json();
-  location.href = `draw?p=${slug}&part=${selected || ''}&bg=${id}`;
+  location.href = `draw?p=${enc(slug)}&part=${enc(selected || '')}&bg=${id}`;
 };
 document.getElementById('df').onclick = () => {
-  location.href = `draw?p=${slug}`;
+  location.href = `draw?p=${enc(slug)}`;
 };
 
 resize();
