@@ -8,8 +8,12 @@ services:
       - "127.0.0.1:3941:3941"
     volumes:
       - ./models:/app/models
+      - web-cache:/app/cache
     environment:
       - MODELS_DIR=/app/models
+      - CACHE_DIR=/app/cache
+      # 루트로 올라갔다. /v2 로 돌리려면 /v2/ 로 되돌린다.
+      - BASE_HREF=/
     # 컨테이너가 쓴 파일이 root 소유가 되면 호스트에서 정리할 수 없다
     user: "1000:1000"
     restart: unless-stopped
@@ -17,7 +21,7 @@ services:
   viewer:
     build: .
     ports:
-      - "3939:3939"
+      - "127.0.0.1:3939:3939"
     volumes:
       - ./models:/app/models
     restart: unless-stopped
@@ -25,10 +29,14 @@ services:
   feedback:
     build: ./feedback_tool
     ports:
-      - "3940:3940"
+      - "127.0.0.1:3940:3940"
     volumes:
       - ./models:/app/models
       # 개발 편의: 코드 변경이 rebuild 없이 반영됨 (디렉토리 마운트라 단일파일 inode 문제 없음)
       # inject.js(정적)는 즉시, server.py 변경은 `docker compose restart feedback` 로 반영
       - ./feedback_tool:/app
     restart: unless-stopped
+
+volumes:
+  # STEP → STL 변환 캐시. models/ 는 소스 트리라 파생물을 섞지 않는다.
+  web-cache:
