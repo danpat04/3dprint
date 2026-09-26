@@ -1,7 +1,12 @@
 """web v2 — 프로젝트 중심 모델링 도구.
 
-3d.danp.at/v2 에 붙는다. Caddy 가 `/v2/*` 를 이 서버로 넘기고,
-FastAPI 는 root_path="/v2" 로 URL 을 생성한다.
+3d.danp.at/v2 에 붙는다. Caddy 가 `handle_path /v2/*` 로 **접두사를 떼고** 넘기므로
+앱은 `/` 기준으로 동작한다.
+
+`root_path` 는 쓰지 않는다. 일반 라우트는 경로를 그대로 매칭하지만 **마운트
+(StaticFiles)는 root_path 를 먼저 떼어내서**, Caddy 가 이미 뗀 경로를 한 번 더 떼려다
+정적 파일만 404 가 난다. 문서(OpenAPI)를 끈 상태라 root_path 가 필요 없고,
+HTML 도 전부 상대 경로를 쓴다.
 
 **인증 코드가 없다.** Caddy 의 forward_auth + oauth2-proxy 가 앞단에서 걸러내고,
 통과된 요청에 사용자 이메일을 헤더로 붙여준다.
@@ -9,7 +14,6 @@ FastAPI 는 root_path="/v2" 로 URL 을 생성한다.
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
@@ -19,9 +23,8 @@ from fastapi.staticfiles import StaticFiles
 from app import projects as P
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
-ROOT_PATH = os.environ.get("ROOT_PATH", "/v2")
 
-app = FastAPI(title="modeling v2", root_path=ROOT_PATH, docs_url=None, redoc_url=None)
+app = FastAPI(title="modeling v2", docs_url=None, redoc_url=None)
 
 
 def current_user(request: Request) -> str | None:

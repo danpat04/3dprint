@@ -10,7 +10,6 @@ services:
       - ./models:/app/models
     environment:
       - MODELS_DIR=/app/models
-      - ROOT_PATH=/v2
     # 컨테이너가 쓴 파일이 root 소유가 되면 호스트에서 정리할 수 없다
     user: "1000:1000"
     restart: unless-stopped
