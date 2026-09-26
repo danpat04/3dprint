@@ -32,8 +32,11 @@ const key = new THREE.DirectionalLight(0xffffff, 1.6);
 key.position.set(1, 1.4, 1);
 scene.add(key);
 
-let current = null;
-const material = new THREE.MeshLambertMaterial({ color: 0xb8c2cc });
+let current = null;                       // 현재 파트의 솔리드 메시들
+// 조립품에서 조각을 구분하려고 색을 돌려 쓴다. 단품(1조각)은 첫 색만 쓴다.
+const PALETTE = [0xb8c2cc, 0x7fb3e8, 0xe8b87f, 0x9fd8a0, 0xd8a0d0,
+                 0xe8e07f, 0x9fd8d8, 0xd89f9f, 0xa8a8e8, 0xc8d89f,
+                 0xe8c8a0, 0x9fc0d8];
 
 // 프린터 베드 — 크기 감각의 기준점. 파트를 여기 올려놓고 본다.
 const BED = 256;
@@ -80,17 +83,51 @@ function frame(obj) {
   controls.update();
 }
 
+function clearMeshes() {
+  for (const m of current || []) {
+    scene.remove(m); m.geometry.dispose(); m.material.dispose();
+  }
+  current = null;
+}
+
 async function show(part) {
   hint.textContent = '불러오는 중…';
-  const res = await fetch(`mesh/${slug}/${part}`);
-  if (!res.ok) { hint.textContent = '아직 export 되지 않았습니다'; return; }
-  const geo = new STLLoader().parse(await res.arrayBuffer());
-  geo.computeVertexNormals();
-  if (current) { scene.remove(current); current.geometry.dispose(); }
-  current = new THREE.Mesh(geo, material);
-  scene.add(current);
-  frame(current);
+  const info = await fetch(`meshinfo/${slug}/${part}`);
+  if (!info.ok) { hint.textContent = '아직 export 되지 않았습니다'; return; }
+  const { solids } = await info.json();
+  const loader = new STLLoader();
+  const group = new THREE.Group();
+  const meshes = [];
+  for (const s of solids) {
+    const res = await fetch(`mesh/${slug}/${part}/${s.index}`);
+    if (!res.ok) continue;
+    const geo = loader.parse(await res.arrayBuffer());
+    geo.computeVertexNormals();
+    const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({
+      color: PALETTE[meshes.length % PALETTE.length] }));
+    group.add(mesh); meshes.push(mesh);
+  }
+  clearMeshes();
+  current = meshes;
+  scene.add(group);
+  frame(group);
+  renderSolids(solids, meshes);
   hint.textContent = '';
+}
+
+// 조립품일 때만 조각 목록을 보여준다 — 단품은 켤 것도 끌 것도 없다
+function renderSolids(solids, meshes) {
+  const box = document.getElementById('solids');
+  if (solids.length < 2) { box.innerHTML = ''; return; }
+  box.innerHTML = '<div class="sec">조각</div>' + solids.map((s, i) => `
+    <label class="sol"><input type="checkbox" data-i="${i}" checked>
+      <span class="sw" style="background:#${PALETTE[i % PALETTE.length]
+        .toString(16).padStart(6, '0')}"></span>
+      ${s.volume} cm³ <span class="tag">${s.size.join('×')}</span></label>`).join('');
+  box.onchange = e => {
+    const i = +e.target.dataset.i;
+    if (meshes[i]) meshes[i].visible = e.target.checked;
+  };
 }
 
 (function loop() {
@@ -189,10 +226,26 @@ document.getElementById('parts').addEventListener('click', e => {
   show(selected);
 });
 
+// ---- 자동 갱신 ----
+// 내가 터미널에서 빌드해도 화면이 알아서 바뀐다.
+let rev = null;
+setInterval(async () => {
+  if (building) return;                   // 빌드 중엔 그쪽이 갱신을 맡는다
+  try {
+    const r = (await (await fetch(`rev/${slug}`)).json()).rev;
+    if (rev === null) { rev = r; return; }
+    if (r !== rev) {
+      rev = r;
+      const have = await refresh();
+      if (selected && have.has(selected)) show(selected);
+    }
+  } catch { /* 네트워크 끊김은 무시 */ }
+}, 4000);
+
 // ---- 피드백 · 드래프트 ----
 // 프로젝트/파트가 URL 에 이미 있으므로 그리기 페이지에서 고를 일이 없다.
 document.getElementById('fb').onclick = async () => {
-  if (!current) { alert('먼저 파트를 선택하세요'); return; }
+  if (!current || !current.length) { alert('먼저 파트를 선택하세요'); return; }
   renderer.render(scene, camera);                 // 캔버스를 확실히 채우고 캡처
   const image = cv.toDataURL('image/png');
   const res = await fetch('capture', {

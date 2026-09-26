@@ -60,3 +60,9 @@ a.dl .when { float: right; color: #6a6a74; font-size: 11px; }
         cursor: pointer; }
 .act:hover { border-color: #3d7dff; color: #fff; }
 header h1 { flex: 1; }
+.sol { display: flex; align-items: center; gap: 7px; padding: 4px 14px;
+        font-size: 12px; color: #c8c8d0; cursor: pointer; }
+.sol:hover { background: #22222a; }
+.sol input { margin: 0; }
+.sw { width: 11px; height: 11px; border-radius: 3px; flex-shrink: 0; }
+.sol .tag { margin-left: auto; font-size: 10px; color: #6a6a74; }

@@ -92,13 +92,7 @@ def image(slug: str):
     return FileResponse(target, media_type="image/png")
 
 
-@app.get("/mesh/{slug:path}")
-def mesh_stl(slug: str):
-    """파트의 STL. exports/ 의 STEP 을 변환해 캐시에서 돌려준다.
-
-    slug 는 `<project>/<part>` 형태. 아직 export 된 적 없는 파트는 404 —
-    프런트가 "빌드 필요" 로 표시한다.
-    """
+def _step_of(slug: str):
     head, _, part = slug.rpartition("/")
     project = P.get_project(head)
     if project is None or not part or "/" in part or part.startswith("."):
@@ -106,11 +100,46 @@ def mesh_stl(slug: str):
     step = project.path / "exports" / f"{part}.step"
     if not step.is_file():
         raise HTTPException(404, "not exported yet")
+    return project, part, step
+
+
+@app.get("/meshinfo/{slug:path}")
+def mesh_info(slug: str):
+    """파트를 이루는 솔리드 목록. 조립품이면 여럿이다."""
+    project, part, step = _step_of(slug)
     try:
-        out = mesh.stl_for(step, project.slug, part)
+        return mesh.build(step, project.slug, part)
     except Exception as exc:                      # 변환 실패를 그대로 노출
         raise HTTPException(500, f"mesh failed: {exc}") from exc
+
+
+@app.get("/mesh/{slug:path}")
+def mesh_stl(slug: str):
+    """솔리드 하나의 STL. slug 는 `<project>/<part>/<index>`."""
+    head, _, idx = slug.rpartition("/")
+    if not idx.isdigit():
+        raise HTTPException(404, "not found")
+    project, part, step = _step_of(head)
+    try:
+        mesh.build(step, project.slug, part)
+    except Exception as exc:
+        raise HTTPException(500, f"mesh failed: {exc}") from exc
+    out = mesh.stl_path(project.slug, part, int(idx))
+    if not out.is_file():
+        raise HTTPException(404, "no such solid")
     return FileResponse(out, media_type="model/stl")
+
+
+@app.get("/rev/{slug:path}")
+def revision(slug: str):
+    """프로젝트의 최신 변경 시각. 프런트가 폴링해 자동 갱신한다."""
+    project = P.get_project(slug)
+    if project is None:
+        raise HTTPException(404, "project not found")
+    times = [a["mtime"] for a in P.list_artifacts(project)]
+    if project.updated:
+        times.append(project.updated.isoformat())
+    return {"rev": max(times) if times else ""}
 
 
 @app.on_event("startup")
