@@ -33,6 +33,7 @@ key.position.set(1, 1.4, 1);
 scene.add(key);
 
 let current = null;                       // 현재 파트의 솔리드 메시들
+let currentGroup = null;                  // 씬에 실제로 들어간 것
 // 조립품에서 조각을 구분하려고 색을 돌려 쓴다. 단품(1조각)은 첫 색만 쓴다.
 const PALETTE = [0xb8c2cc, 0x7fb3e8, 0xe8b87f, 0x9fd8a0, 0xd8a0d0,
                  0xe8e07f, 0x9fd8d8, 0xd89f9f, 0xa8a8e8, 0xc8d89f,
@@ -84,10 +85,12 @@ function frame(obj) {
 }
 
 function clearMeshes() {
-  for (const m of current || []) {
-    scene.remove(m); m.geometry.dispose(); m.material.dispose();
-  }
+  // 씬에서 빼야 할 것은 **그룹**이다. 메시의 부모는 그룹이라
+  // scene.remove(mesh) 는 아무 일도 하지 않고 이전 모델이 계속 쌓인다.
+  if (currentGroup) scene.remove(currentGroup);
+  for (const m of current || []) { m.geometry.dispose(); m.material.dispose(); }
   current = null;
+  currentGroup = null;
 }
 
 async function show(part) {
@@ -109,6 +112,7 @@ async function show(part) {
   }
   clearMeshes();
   current = meshes;
+  currentGroup = group;
   scene.add(group);
   frame(group);
   renderSolids(solids, meshes);
