@@ -14,13 +14,14 @@ HTML 도 전부 상대 경로를 쓴다.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
-from app import projects as P
+from app import mesh, projects as P
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 
@@ -88,14 +89,54 @@ def image(slug: str):
     return FileResponse(target, media_type="image/png")
 
 
+@app.get("/mesh/{slug:path}")
+def mesh_stl(slug: str):
+    """파트의 STL. exports/ 의 STEP 을 변환해 캐시에서 돌려준다.
+
+    slug 는 `<project>/<part>` 형태. 아직 export 된 적 없는 파트는 404 —
+    프런트가 "빌드 필요" 로 표시한다.
+    """
+    head, _, part = slug.rpartition("/")
+    project = P.get_project(head)
+    if project is None or not part or "/" in part or part.startswith("."):
+        raise HTTPException(404, "not found")
+    step = project.path / "exports" / f"{part}.step"
+    if not step.is_file():
+        raise HTTPException(404, "not exported yet")
+    try:
+        out = mesh.stl_for(step, project.slug, part)
+    except Exception as exc:                      # 변환 실패를 그대로 노출
+        raise HTTPException(500, f"mesh failed: {exc}") from exc
+    return FileResponse(out, media_type="model/stl")
+
+
 @app.get("/health")
 def health():
     return {"ok": True, "projects": len(P.iter_projects())}
 
 
+# 브라우저가 볼 때의 앱 루트. Caddy 가 /v2 접두사를 떼고 넘기므로 앱은 모르고,
+# 상대 경로가 /p/<a>/<b> 같은 깊은 URL 에서 깨지지 않도록 <base> 로 못박는다.
+BASE_HREF = os.environ.get("BASE_HREF", "/v2/")
+
+
+def _page(name: str) -> str:
+    return (STATIC_DIR / name).read_text(encoding="utf-8").replace("__BASE__", BASE_HREF)
+
+
 @app.get("/", response_class=HTMLResponse)
 def index():
-    return (STATIC_DIR / "index.html").read_text(encoding="utf-8")
+    return _page("index.html")
+
+
+@app.get("/p/{slug:path}", response_class=HTMLResponse)
+def project_page(slug: str):
+    project = P.get_project(slug)
+    if project is None:
+        raise HTTPException(404, "project not found")
+    html = _page("project.html")
+    return html.replace("<body class=\"proj\">",
+                        f"<body class=\"proj\" data-slug=\"{project.slug}\">")
 
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")

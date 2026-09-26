@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8">
+<base href="__BASE__">
+<title>modeling</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="static/app.css">
+</head><body class="proj">
+<header>
+  <a href="." class="back">←</a>
+  <h1 id="ptitle">…</h1>
+  <span id="me" class="muted"></span>
+</header>
+<div class="split">
+  <aside>
+    <div class="sec">모델링</div>
+    <div id="parts"></div>
+    <div class="sec">다운로드</div>
+    <div id="files"></div>
+  </aside>
+  <section id="stage">
+    <div id="hint" class="muted">좌측에서 파트를 고르세요</div>
+    <canvas id="cv"></canvas>
+  </section>
+</div>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+            "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}
+</script>
+<script type="module" src="static/project.js"></script>
+</body></html>

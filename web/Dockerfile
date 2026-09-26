@@ -25,6 +25,11 @@ RUN uv pip install --system --no-cache \
 # 소프트웨어 렌더링 강제 (GPU 없는 컨테이너)
 ENV LIBGL_ALWAYS_SOFTWARE=1
 
+# 캐시 디렉토리를 이미지에 미리 만들어 소유권을 준다.
+# 빈 명명 볼륨은 마운트 지점의 내용과 **소유권까지** 이미지에서 물려받는다.
+# 이게 없으면 볼륨이 root 소유로 생기고, uid 1000 으로 도는 컨테이너가 못 쓴다.
+RUN mkdir -p /app/cache && chown 1000:1000 /app/cache
+
 COPY app/ app/
 
 EXPOSE 3941
