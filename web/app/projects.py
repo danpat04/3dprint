@@ -213,6 +213,9 @@ def list_parts(project: Project) -> list[Part]:
 # 앞머리 _ 는 막는다 — _lib/_drafts/_assets 처럼 탐색에서 제외되는 이름이라
 # 만들자마자 목록에서 사라진다.
 _NAME_RE = re.compile(r"^[a-z0-9가-힣][a-z0-9가-힣_]{1,48}$")
+# 하이픈·공백은 **파이썬 모듈명이 될 수 없어** 막는다 (빌드가 `python -m models...`).
+# 대문자는 기술적으로 가능하나 기존 24개가 전부 snake_case 라 섞지 않는다.
+_NAME_HINT = "{what} 한글 또는 소문자·숫자·밑줄만 쓸 수 있습니다 (2~49자, 앞머리 _ 불가)"
 
 README_SKELETON = """# {name} — 
 
@@ -239,9 +242,9 @@ def create(category: str | None, name: str) -> Project:
     실제 모델링은 대화로 진행되므로 model.py 는 여기서 만들지 않는다.
     """
     if not _NAME_RE.match(name or ""):
-        raise ValueError("이름은 한글·소문자·숫자·밑줄만, 2~49자 (앞머리 _ 불가)")
+        raise ValueError(_NAME_HINT.format(what="이름은"))
     if category and not _NAME_RE.match(category):
-        raise ValueError("카테고리 형식이 올바르지 않습니다")
+        raise ValueError(_NAME_HINT.format(what="카테고리는"))
     path = MODELS_DIR / (f"{category}/{name}" if category else name)
     if path.exists():
         raise ValueError("이미 있는 프로젝트입니다")
