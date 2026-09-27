@@ -21,7 +21,7 @@ from build123d import (
 )
 
 from models._lib.iter import finalize_iteration
-from models.camping.modular_rack.params import (
+from models.캠핑.modular_rack.params import (
     BOX_WALL, CLAMP_T, DT_DEPTH, DT_NECK, DT_SEAT, DT_W, FLARE, FLARE_LEN,
     FRAME_H, HOOK_CLR, HOOK_DROP, HOOK_RISE, HOOK_T, HOOK_WIDTH,
     SLOT_TOP, Y_BACK,

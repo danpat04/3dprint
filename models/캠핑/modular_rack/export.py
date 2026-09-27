@@ -10,10 +10,10 @@ from pathlib import Path
 
 from build123d import export_step
 
-from models.camping.modular_rack.basket import build_basket
-from models.camping.modular_rack.bin import build_bin
-from models.camping.modular_rack.frame import build_frame
-from models.camping.modular_rack.hook import build_hook
+from models.캠핑.modular_rack.basket import build_basket
+from models.캠핑.modular_rack.bin import build_bin
+from models.캠핑.modular_rack.frame import build_frame
+from models.캠핑.modular_rack.hook import build_hook
 
 EXPORTS = Path(__file__).parent / "exports"
 

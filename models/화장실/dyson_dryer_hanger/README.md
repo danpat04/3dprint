@@ -98,8 +98,8 @@
 - 보: **90° 눕혀** 구멍이 수직이 되게. 그대로 뽑으면 구멍이 가로 터널이 되어 브리지 발생
 
 ```bash
-uv run python -m models.bathroom.dyson_dryer_hanger.hanger    # 렌더 + 뷰어
-uv run python -m models.bathroom.dyson_dryer_hanger.export    # STEP
+uv run python -m models.화장실.dyson_dryer_hanger.hanger    # 렌더 + 뷰어
+uv run python -m models.화장실.dyson_dryer_hanger.export    # STEP
 ```
 
 ## 출력 결과 — 실사용 피드백

@@ -45,7 +45,7 @@ from build123d import (
 )
 
 from models._lib.iter import finalize_iteration
-from models.bathroom.dyson_dryer_hanger.params import *  # noqa: F403
+from models.화장실.dyson_dryer_hanger.params import *  # noqa: F403
 
 
 def _box(x0, x1, y0, y1, z0, z1, mode=Mode.ADD):

@@ -110,8 +110,8 @@ Flair 58 로 추출할 때 **주로 포터필터에서** 새는 커피가 주변
 ## 사용법
 
 ```bash
-uv run python -m models.coffee.flair58_splash_guard.guard    # 렌더 + 뷰어
-uv run python -m models.coffee.flair58_splash_guard.export   # STEP
+uv run python -m models.커피.flair58_splash_guard.guard    # 렌더 + 뷰어
+uv run python -m models.커피.flair58_splash_guard.export   # STEP
 ```
 
 ## 검토했으나 채택하지 않은 것

@@ -1,6 +1,6 @@
 """puck_screen_holder — 단일 파일 통합.
 
-레거시 models/coffee/puck_screen_holder/ 의 11개 부품을 한 파일에 함수로 통합.
+레거시 models/커피/puck_screen_holder/ 의 11개 부품을 한 파일에 함수로 통합.
 각 부품 build 함수가 part 를 반환. assembly 에서 Pos 로 그리드 layout 후 finalize_iteration.
 """
 

@@ -20,7 +20,7 @@ from build123d import (
 )
 
 from models._lib.iter import finalize_iteration
-from models.camping.modular_rack.params import (
+from models.캠핑.modular_rack.params import (
     BIN_BASE, BIN_CLR, BIN_WALL, FLANGE_D, FLANGE_T, GROOVE_D, GROOVE_W,
     RIB_W, UNIT,
 )

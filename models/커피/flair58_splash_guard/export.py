@@ -1,6 +1,6 @@
 """flair58_splash_guard — 부품별 STEP export.
 
-    uv run python -m models.coffee.flair58_splash_guard.export
+    uv run python -m models.커피.flair58_splash_guard.export
 
   exports/left.step      사용자 기준 왼쪽 — 전원선 홈 + 그루브
   exports/right.step     사용자 기준 오른쪽 — 텅
@@ -14,7 +14,7 @@ from pathlib import Path
 
 from build123d import export_step
 
-from models.coffee.flair58_splash_guard.guard import (
+from models.커피.flair58_splash_guard.guard import (
     build_assembly,
     build_left,
     build_right,

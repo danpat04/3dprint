@@ -33,7 +33,7 @@ from build123d import (
 )
 
 from models._lib.iter import finalize_iteration
-from models.coffee.flair58_splash_guard.params import *  # noqa: F403
+from models.커피.flair58_splash_guard.params import *  # noqa: F403
 
 MIN3 = (Align.MIN, Align.MIN, Align.MIN)
 

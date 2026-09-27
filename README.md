@@ -48,8 +48,8 @@ models/                    자율 모델링 영역 (워크플로 정본: models/
     exports/               STEP 출력 (gitignore, 재생성 가능)
     intermediate/          iter 별 PNG/STEP (gitignore)
     feedback/              사용자 덧그림 피드백 (gitignore)
-  coffee/                  카테고리 그룹핑: tamper_stand, portafilter_stand, …
-  camping/  house_fix/  toy/
+  커피/                  카테고리 그룹핑: tamper_stand, portafilter_stand, …
+  캠핑/  집수리/  장난감/
   _assets/fonts/           양각 글자용 폰트 원본 (fontconfig 등록 필요)
 ```
 
@@ -60,7 +60,7 @@ git 에는 **소스(`*.py`) + `README.md` + `images/` 만** 남고, STEP·중간
 ```bash
 # 모델 빌드 → STEP export + 5방향 PNG + 뷰어에 표시
 python -m models.<project>.model
-# 카테고리 하위: python -m models.coffee.<project>.model
+# 카테고리 하위: python -m models.커피.<project>.model
 
 # 다중 파트 조립 확인 / 개별 STEP export
 python -m models.<project>.assembly
@@ -71,10 +71,10 @@ python -m models.<project>.export
 
 | 카테고리 | 모델 |
 |---|---|
-| **camping/** | cutlery_holder(수저통) · tarp_magnet_holder(타프 자석) · knife_cover(식칼 시스) · modular_rack · igt_assembly_jig · igt_press_tool |
-| **coffee/** | tamper_stand · portafilter_stand · feimaobuk_a2_cup · distributor_stand · dutch_knob |
-| **house_fix/** | bracket_base(천장 홈 브라켓) · groove_spacer(홈 메움 스페이서) · drilling_base(드릴링 바닥 보호 지그) |
-| **toy/** | bubble · light_baton |
+| **캠핑/** | cutlery_holder(수저통) · tarp_magnet_holder(타프 자석) · knife_cover(식칼 시스) · modular_rack · igt_assembly_jig · igt_press_tool |
+| **커피/** | tamper_stand · portafilter_stand · feimaobuk_a2_cup · distributor_stand · dutch_knob |
+| **집수리/** | bracket_base(천장 홈 브라켓) · groove_spacer(홈 메움 스페이서) · drilling_base(드릴링 바닥 보호 지그) |
+| **장난감/** | bubble · light_baton |
 | 그 외 | name_tag(양각 네임택) · mouse_case · shrimp_scoop · juice_pack_holder · monitor_stand · puck_screen_holder |
 
 각 모델의 상세 스펙·이미지는 해당 폴더의 `README.md` 참고.

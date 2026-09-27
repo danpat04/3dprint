@@ -1,13 +1,13 @@
 # puck_screen_holder
 
-레거시 `models/coffee/puck_screen_holder/` 에서 가져와 vibe_models 워크플로 + 디자인 정리.
+레거시 `models/커피/puck_screen_holder/` 에서 가져와 vibe_models 워크플로 + 디자인 정리.
 **7 부품 일체 model.py** + 통합 빌드 (build123d, finalize_iteration).
 
 ![iso](images/final_iso.png)
 
 ## 개요
 
-- **출처**: `models/coffee/puck_screen_holder/` 레거시
+- **출처**: `models/커피/puck_screen_holder/` 레거시
 - **재구성**: 모든 부품을 단일 `model.py` 의 `build_<name>()` 함수로 통합
 - **부품**: 7개 (handle 은 좌/우 2개 출력, 함수 1개)
 - **디자인 정리**: outer_shell/cover 제거, body 뒤집기 + cone 자기정렬, spring pin 및 bolt pin cover 에 통합, 공차 재설계

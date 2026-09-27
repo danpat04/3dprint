@@ -7,10 +7,10 @@ EXPLODE > 0 이면 부품을 결합 위치에서 빼서 분해도로 렌더. 0 =
 from build123d import Pos
 
 from models._lib.iter import finalize_iteration
-from models.camping.modular_rack.bin import build_bin
-from models.camping.modular_rack.frame import build_frame
-from models.camping.modular_rack.hook import build_hook
-from models.camping.modular_rack.params import (
+from models.캠핑.modular_rack.bin import build_bin
+from models.캠핑.modular_rack.frame import build_frame
+from models.캠핑.modular_rack.hook import build_hook
+from models.캠핑.modular_rack.params import (
     BIN_CLR, FLANGE_D, FLANGE_T, FRAME_CH, FRAME_H, HOOK_XS, UNIT,
 )
 

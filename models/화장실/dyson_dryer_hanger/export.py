@@ -1,6 +1,6 @@
 """dyson_dryer_hanger — 부품별 STEP export.
 
-    uv run python -m models.bathroom.dyson_dryer_hanger.export
+    uv run python -m models.화장실.dyson_dryer_hanger.export
 
   exports/rib.step          리브 — **2개 필요**. 좌우 완전 동일품
   exports/connector_a.step  선반 위 십자 맞춤 커넥터 — 1개
@@ -18,7 +18,7 @@ from pathlib import Path
 
 from build123d import export_step
 
-from models.bathroom.dyson_dryer_hanger.hanger import (
+from models.화장실.dyson_dryer_hanger.hanger import (
     build_assembly,
     build_beam,
     build_connector_a,
