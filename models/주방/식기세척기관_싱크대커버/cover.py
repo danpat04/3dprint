@@ -102,18 +102,20 @@ def build_cover():
         revolve(prof_out, axis=axis, revolution_arc=ELBOW_TURN)
         add(thread)                                         # 나사산
 
+        # 칼라–플랜지 이음 모따기 — **가장 빠듯한 곳**이다.
+        # 바깥 원기둥에서 45도 원뿔을 빼면 모따기할 영역만 남는다.
+        # **반드시 보어를 파기 전에 해야 한다.** Cone 은 축까지 채우는 속찬
+        # 원뿔이라, 보어를 판 뒤에 더하면 통로를 도로 막는다
+        cham_h = (CHAM_D - COLLAR_OD) / 2
+        Cylinder(CHAM_D / 2, cham_h, align=BOT, mode=Mode.SUBTRACT)
+        Cone(COLLAR_OD / 2, CHAM_D / 2, cham_h, align=BOT, mode=Mode.ADD)
+
         # ---- 통로 ----
         # 칼라는 28.5 (구멍 제약). 플랜지 안에서 33 으로 벌어진다 —
         # 굵은 부분(25.5)이 휜 구간을 지날 여유를 벌기 위해서다
         Cylinder(BORE_D / 2, COLLAR_LEN, align=TOP, mode=Mode.SUBTRACT)
         Cone(BORE_D / 2, ELBOW_BORE / 2, FLANGE_T, align=BOT, mode=Mode.SUBTRACT)
         revolve(prof_in, axis=axis, revolution_arc=ELBOW_TURN, mode=Mode.SUBTRACT)
-
-        # 칼라–플랜지 이음 모따기 — **가장 빠듯한 곳**이다.
-        # 바깥 원기둥에서 45도 원뿔을 빼면 모따기할 영역만 남는다
-        cham_h = (CHAM_D - COLLAR_OD) / 2
-        Cylinder(CHAM_D / 2, cham_h, align=BOT, mode=Mode.SUBTRACT)
-        Cone(COLLAR_OD / 2, CHAM_D / 2, cham_h, align=BOT, mode=Mode.ADD)
 
         # 오링 홈 — 홈 안쪽이 ⌀35.9 라 구멍(31.5) 바깥 단단한 상판 위에 앉는다
         extrude(oring, ORING_DEPTH, mode=Mode.SUBTRACT)
