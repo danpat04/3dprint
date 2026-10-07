@@ -19,6 +19,7 @@ from build123d import (
     BuildPart,
     BuildSketch,
     Circle,
+    GeomType,
     Helix,
     Polygon,
     Compound,
@@ -59,9 +60,12 @@ from models.주방.식기세척기관_싱크대커버.params import (
     NUT_OD,
     THREAD_DEPTH,
     THREAD_FIT,
+    THREAD_EMB,
+    THREAD_GAP,
     THREAD_LEN,
     THREAD_PITCH,
     ORING_DEPTH,
+    CHAM_D,
     ORING_MEAN,
     ORING_W,
 )
@@ -105,8 +109,13 @@ def build_cover():
         Cone(BORE_D / 2, ELBOW_BORE / 2, FLANGE_T, align=BOT, mode=Mode.SUBTRACT)
         revolve(prof_in, axis=axis, revolution_arc=ELBOW_TURN, mode=Mode.SUBTRACT)
 
-        # 오링 홈 — 플랜지 아랫면. 홈 안쪽이 ⌀35.9 라 구멍(31.5) 바깥
-        # 단단한 상판 위에 온전히 앉는다
+        # 칼라–플랜지 이음 모따기 — **가장 빠듯한 곳**이다.
+        # 바깥 원기둥에서 45도 원뿔을 빼면 모따기할 영역만 남는다
+        cham_h = (CHAM_D - COLLAR_OD) / 2
+        Cylinder(CHAM_D / 2, cham_h, align=BOT, mode=Mode.SUBTRACT)
+        Cone(COLLAR_OD / 2, CHAM_D / 2, cham_h, align=BOT, mode=Mode.ADD)
+
+        # 오링 홈 — 홈 안쪽이 ⌀35.9 라 구멍(31.5) 바깥 단단한 상판 위에 앉는다
         extrude(oring, ORING_DEPTH, mode=Mode.SUBTRACT)
 
         # 출구 나팔 — 호스가 꺾이는 지점의 날카로운 모서리를 없앤다.
@@ -126,24 +135,47 @@ def build_cover():
     return part.part
 
 
-THREAD_TOP = -COLLAR_PILOT                 # 나사 시작 (상판 바로 아래)
+THREAD_TOP = -(COLLAR_PILOT + THREAD_GAP)  # 나사 시작 (파일럿 아래)
 THREAD_BOT = THREAD_TOP - THREAD_LEN
 
 
+THREAD_SEG = 4.0        # 한 번에 쓸어내는 길이 상한
+
+
 def _thread(grow=0.0):
-    """칼라 나사산 한 줄. grow 를 주면 너트 쪽 여유 있는 짝이 된다.
+    """칼라 나사산. grow 를 주면 너트 쪽 여유 있는 짝이 된다.
 
     **빌더 밖에서** 만든다. 프로파일 평면의 x 축을 반지름 방향으로 고정해야
     골 깊이가 의도대로 나온다 — 자동으로 두면 축 방향이 반지름이 되어
     깊이가 pitch 만큼 깊어진다.
+
+    그리고 **짧게 끊어서 이어 붙인다.** 한 번에 5 바퀴를 쓸면 프레네 프레임이
+    비틀려 솔리드가 자기교차하고, 불린이 조용히 망가진다 (합친 부피가 칼라
+    단품보다 작아지는 식으로 드러났다). is_frenet=False 로 피할 수는 있지만
+    그러면 프로파일이 기울어 깊이가 0.2 → 0.38 로 틀어진다.
     """
     rmid = COLLAR_ROOT / 2 + THREAD_DEPTH / 2
-    path = Helix(pitch=THREAD_PITCH, height=THREAD_LEN, radius=rmid,
-                 center=(0, 0, THREAD_BOT))
-    pl = Plane(origin=path @ 0, x_dir=(1, 0, 0), z_dir=path % 0)
-    d, a, b = THREAD_DEPTH / 2 + grow, THREAD_PITCH * 0.35 + grow, THREAD_PITCH * 0.18 + grow
-    prof = pl * Polygon((-d, -a), (d, -b), (d, b), (-d, a), align=None)
-    return sweep(prof, path=path, is_frenet=True)
+    d = THREAD_DEPTH / 2 + grow
+    a = THREAD_PITCH * 0.35 + grow
+    b = THREAD_PITCH * 0.18 + grow
+    nseg = max(1, math.ceil(THREAD_LEN / THREAD_SEG))
+    seg = THREAD_LEN / nseg
+    out = None
+    for i in range(nseg):
+        path = Helix(pitch=THREAD_PITCH, height=seg, radius=rmid,
+                     center=(0, 0, THREAD_BOT + seg * i))
+        start = path @ 0
+        rad = Vector(start.X, start.Y, 0).normalized()
+        # 안쪽을 EMB 만큼 **칼라 속에 묻는다.** 뿌리가 칼라 표면과 정확히
+        # 일치하면 접선 불린이 되어 OCC 가 Null 을 뱉는다
+        prof = Plane(origin=start, x_dir=rad, z_dir=path % 0) * \
+            Polygon((-(d + THREAD_EMB), -a), (d, -b),
+                    (d, b), (-(d + THREAD_EMB), a), align=None)
+        # 각 토막은 각도 0 에서 시작하므로, 앞 토막이 돈 만큼 돌려 이어 붙인다
+        piece = sweep(prof, path=path, is_frenet=True).rotate(
+            Axis.Z, 360.0 * seg * i / THREAD_PITCH)
+        out = piece if out is None else out.fuse(piece)
+    return out.clean()
 
 
 def build_nut():
