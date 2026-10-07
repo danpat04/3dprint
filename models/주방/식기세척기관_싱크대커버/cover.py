@@ -60,6 +60,7 @@ from models.주방.식기세척기관_싱크대커버.params import (
     NUT_OD,
     THREAD_DEPTH,
     THREAD_FIT,
+    THREAD_FLANK,
     THREAD_EMB,
     THREAD_GAP,
     THREAD_LEN,
@@ -158,8 +159,8 @@ def _thread(grow=0.0):
     """
     rmid = COLLAR_ROOT / 2 + THREAD_DEPTH / 2
     d = THREAD_DEPTH / 2 + grow
-    a = THREAD_PITCH * 0.35 + grow
-    b = THREAD_PITCH * 0.18 + grow
+    a = THREAD_PITCH * THREAD_FLANK + grow
+    b = THREAD_PITCH * THREAD_FLANK * 0.5 + grow
     nseg = max(1, math.ceil(THREAD_LEN / THREAD_SEG))
     seg = THREAD_LEN / nseg
     out = None
