@@ -60,7 +60,8 @@ from models.주방.식기세척기관_싱크대커버.params import (
     NUT_OD,
     THREAD_DEPTH,
     THREAD_FIT,
-    THREAD_FLANK,
+    THREAD_CREST,
+    THREAD_FIT_AX,
     THREAD_EMB,
     THREAD_GAP,
     THREAD_LEN,
@@ -94,9 +95,10 @@ def build_cover():
              - Plane.XY * Circle((ORING_MEAN - ORING_W) / 2))
 
     with BuildPart() as part:
-        # 칼라 — 맨 위 2mm 는 ⌀31.0 (구멍 안에서 중심을 잡는다),
-        # 그 아래는 나사 골지름 ⌀30.2
-        Cylinder(COLLAR_OD / 2, COLLAR_PILOT, align=TOP)
+        # 칼라 — 나사 골지름 ⌀29.6. 파일럿 턱은 없다 (너트를 막았다).
+        # 구멍 안에서의 중심은 나사산 꼭대기(⌀31.0)가 잡아준다
+        if COLLAR_PILOT > 0:
+            Cylinder(COLLAR_OD / 2, COLLAR_PILOT, align=TOP)
         with Locations((0, 0, -COLLAR_PILOT)):
             Cylinder(COLLAR_ROOT / 2, COLLAR_LEN - COLLAR_PILOT, align=TOP)
         Cylinder(FLANGE_D / 2, FLANGE_T, align=BOT)         # 플랜지 (상판 위)
@@ -145,22 +147,24 @@ THREAD_BOT = THREAD_TOP - THREAD_LEN
 THREAD_SEG = 4.0        # 한 번에 쓸어내는 길이 상한
 
 
-def _thread(grow=0.0):
-    """칼라 나사산. grow 를 주면 너트 쪽 여유 있는 짝이 된다.
+def _thread(radial=0.0, axial=0.0):
+    """칼라 나사산. radial/axial 을 주면 너트 쪽 여유 있는 짝이 된다.
 
     **빌더 밖에서** 만든다. 프로파일 평면의 x 축을 반지름 방향으로 고정해야
-    골 깊이가 의도대로 나온다 — 자동으로 두면 축 방향이 반지름이 되어
-    깊이가 pitch 만큼 깊어진다.
+    골 깊이가 의도대로 나온다.
 
-    그리고 **짧게 끊어서 이어 붙인다.** 한 번에 5 바퀴를 쓸면 프레네 프레임이
-    비틀려 솔리드가 자기교차하고, 불린이 조용히 망가진다 (합친 부피가 칼라
-    단품보다 작아지는 식으로 드러났다). is_frenet=False 로 피할 수는 있지만
-    그러면 프로파일이 기울어 깊이가 0.2 → 0.38 로 틀어진다.
+    옆면은 **정확히 45도**다 — 뿌리 반폭 a 를 산 반폭 b 에 반지름 길이를
+    더해서 정한다. 25도였을 때는 칼라를 세워 뽑으면 아래 옆면이 처져
+    골을 메웠다.
+
+    그리고 **짧게 끊어 이어 붙인다.** 한 번에 길게 쓸면 프레네 프레임이
+    비틀려 솔리드가 자기교차하고, 불린이 조용히 망가진다.
     """
     rmid = COLLAR_ROOT / 2 + THREAD_DEPTH / 2
-    d = THREAD_DEPTH / 2 + grow
-    a = THREAD_PITCH * THREAD_FLANK + grow
-    b = THREAD_PITCH * THREAD_FLANK * 0.5 + grow
+    d = THREAD_DEPTH / 2 + radial
+    run = 2 * d + THREAD_EMB
+    b = THREAD_CREST + axial
+    a = b + run                      # 옆면 45도
     nseg = max(1, math.ceil(THREAD_LEN / THREAD_SEG))
     seg = THREAD_LEN / nseg
     out = None
@@ -184,7 +188,7 @@ def _thread(grow=0.0):
 def build_nut():
     """너트 ② — 아래에서 칼라에 끼워 올려 조인다. 상판을 커버와 사이에 물고
     오링을 눌러준다. 조일 수 있으므로 상판 두께 편차를 그대로 흡수한다."""
-    mate = _thread(THREAD_FIT)
+    mate = _thread(THREAD_FIT, THREAD_FIT_AX)
     with BuildPart() as part:
         Cylinder(NUT_OD / 2, NUT_H, align=BOT)
         Cylinder(COLLAR_ROOT / 2 + THREAD_FIT, NUT_H, align=BOT, mode=Mode.SUBTRACT)
