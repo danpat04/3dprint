@@ -2,8 +2,7 @@
 
     uv run python -m models.장난감.레고_코인.export
 
-  exports/coin_1,5,10.step    숫자안 — 실제 출력물
-  exports/pip_1,3,5.step      점안 — 실제 출력물
+  exports/coin_1.step         실제 출력물. 필요한 개수만큼 슬라이서에서 복제한다
 
 속에 묻힌 숫자는 3d.danp.at 뷰어의 **「투명」** 버튼으로 본다.
 자른 모델을 따로 내보낼 필요가 없다.
@@ -17,18 +16,13 @@ from pathlib import Path
 
 from build123d import export_step
 
-from models.장난감.레고_코인.coin import build_coin, build_coin_pips
+from models.장난감.레고_코인.coin import build_coin
 
 EXPORTS = Path(__file__).parent / "exports"
 
 
 PARTS = {
     "coin_1": (lambda: build_coin("1"), 1),
-    "coin_5": (lambda: build_coin("5"), 1),
-    "coin_10": (lambda: build_coin("10"), 1),
-    "pip_1": (lambda: build_coin_pips(1), 1),
-    "pip_3": (lambda: build_coin_pips(3), 1),
-    "pip_5": (lambda: build_coin_pips(5), 1),
 }
 
 if __name__ == "__main__":

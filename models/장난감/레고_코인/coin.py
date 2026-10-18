@@ -31,14 +31,14 @@ from models.장난감.레고_코인.params import (
     FONT,
     TEXT_H,
     TEXT_MARGIN,
+    VOID_COVER,
     VOID_T,
-    VOID_TOP_COVER,
 )
 
 BOT = (Align.CENTER, Align.CENTER, Align.MIN)
 
-VOID_TOP = COIN_T - VOID_TOP_COVER       # 공동 윗면
-VOID_BOT = VOID_TOP - VOID_T             # 공동 아랫면
+VOID_BOT = VOID_COVER                    # 공동 아랫면 — 1.8
+VOID_TOP = VOID_BOT + VOID_T             # 공동 윗면 — 4.4
 
 
 def _fit_text(label):
@@ -74,26 +74,5 @@ def build_coin(label="5"):
 
 
 if __name__ == "__main__":
-    finalize_iteration(build_coin())
+    finalize_iteration(build_coin("1"))
 
-
-def build_coin_pips(n=3):
-    """점(핍) 개수로 액면가를 표시하는 안. 주사위처럼 센다.
-
-    둥글고 넓은 공동이라 출력이 확실하고, 글자를 못 읽는 아이도 쓸 수 있다.
-    """
-    from build123d import Circle, Locations
-    from models.장난감.레고_코인.params import PIP_D, PIP_R
-
-    layout = {1: [(0, 0)], 2: [(-1, 0), (1, 0)], 3: [(-1, -1), (0, 0), (1, 1)],
-              4: [(-1, -1), (-1, 1), (1, -1), (1, 1)],
-              5: [(-1, -1), (-1, 1), (0, 0), (1, -1), (1, 1)],
-              6: [(-1, -1), (-1, 0), (-1, 1), (1, -1), (1, 0), (1, 1)]}
-    with BuildPart() as part:
-        Cylinder(COIN_D / 2, COIN_T, align=BOT)
-        chamfer(part.edges().filter_by(Axis.Z, reverse=True), EDGE_CH)
-        with BuildSketch(Plane.XY.offset(VOID_BOT)) as sk:
-            with Locations(*[(x * PIP_R, y * PIP_R) for x, y in layout[n]]):
-                Circle(PIP_D / 2)
-        extrude(sk.sketch, VOID_T, mode=Mode.SUBTRACT)
-    return part.part
