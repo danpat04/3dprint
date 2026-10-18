@@ -113,6 +113,7 @@ async function show(part) {
     geo.computeVertexNormals();
     const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({
       color: PALETTE[meshes.length % PALETTE.length] }));
+    applyTranslucent(mesh);
     group.add(mesh); meshes.push(mesh);
   }
   clearMeshes();
@@ -123,6 +124,30 @@ async function show(part) {
   renderSolids(solids, meshes);
   hint.textContent = '';
 }
+
+// ---- 투명 보기 ----
+// 속에 묻힌 형상(공동에 새긴 글자 같은 것)을 확인할 때 쓴다.
+// DoubleSide 라야 공동의 안쪽 면이 그려지고, depthWrite 를 꺼야
+// 뒤쪽 면이 앞면에 가려지지 않는다.
+let translucent = localStorage.getItem('translucent') === '1';
+const trBtn = document.getElementById('tr');
+
+function applyTranslucent(mesh) {
+  const m = mesh.material;
+  m.transparent = translucent;
+  m.opacity = translucent ? 0.32 : 1;
+  m.depthWrite = !translucent;
+  m.side = translucent ? THREE.DoubleSide : THREE.FrontSide;
+  m.needsUpdate = true;
+}
+
+trBtn.classList.toggle('on', translucent);
+trBtn.onclick = () => {
+  translucent = !translucent;
+  localStorage.setItem('translucent', translucent ? '1' : '0');
+  trBtn.classList.toggle('on', translucent);
+  (current || []).forEach(applyTranslucent);
+};
 
 // 조립품일 때만 조각 목록을 보여준다 — 단품은 켤 것도 끌 것도 없다
 function renderSolids(solids, meshes) {
