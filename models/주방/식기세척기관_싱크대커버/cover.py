@@ -18,6 +18,7 @@ from build123d import (
     Axis,
     BuildPart,
     BuildSketch,
+    Box,
     Circle,
     GeomType,
     Helix,
@@ -49,6 +50,7 @@ from models.주방.식기세척기관_싱크대커버.params import (
     ELBOW_RAMP,
     ELBOW_TURN,
     FLANGE_D,
+    FLANGE_FLAT_X,
     FLANGE_R,
     FLANGE_T,
     HOLE_D,
@@ -134,6 +136,11 @@ def build_cover():
 
         # 오링 홈 — 홈 안쪽이 ⌀35.9 라 구멍(31.5) 바깥 단단한 상판 위에 앉는다
         extrude(oring, ORING_DEPTH, mode=Mode.SUBTRACT)
+
+        # 출구 쪽 플랜지 평면 절단 — 싱크대 끝과의 간섭 회피. 플랜지 높이만 자른다
+        with Locations((FLANGE_FLAT_X, 0, 0)):
+            Box(FLANGE_D, FLANGE_D, FLANGE_T, align=(Align.MIN, Align.CENTER, Align.MIN),
+                mode=Mode.SUBTRACT)
 
         # 출구 나팔 — 호스가 꺾이는 지점의 날카로운 모서리를 없앤다.
         # 출구 면은 **법선이 엘보 끝 접선과 같은 평면**이다. 그것으로 고른다
