@@ -248,8 +248,21 @@ def health():
 BASE_HREF = os.environ.get("BASE_HREF", "/v2/")
 
 
+def _assets_ver() -> str:
+    """정적 파일들의 최신 수정시각 — HTML 안의 ?v= 에 박는다.
+
+    no-cache 를 붙여도 **이미 캐시된 것**은 구제가 안 된다. 브라우저가
+    아직 신선하다고 믿는 동안은 서버에 묻지조차 않으니, 새 헤더를 볼 기회가
+    없다. 유일한 탈출구는 URL 을 바꾸는 것이다 (HTML 은 no-cache 라 항상 새것).
+    """
+    mt = max(f.stat().st_mtime for f in STATIC_DIR.glob("*.*"))
+    return str(int(mt))
+
+
 def _page(name: str) -> str:
-    return (STATIC_DIR / name).read_text(encoding="utf-8").replace("__BASE__", BASE_HREF)
+    return ((STATIC_DIR / name).read_text(encoding="utf-8")
+            .replace("__BASE__", BASE_HREF)
+            .replace("__V__", _assets_ver()))
 
 
 def _html(body: str) -> HTMLResponse:
@@ -278,4 +291,22 @@ def project_page(slug: str):
     return _html(html)
 
 
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+class NoCacheStatic(StaticFiles):
+    """정적 파일도 **매번 물어보게** 한다.
+
+    ETag 만 있고 Cache-Control 이 없으면 브라우저는 수명을 제멋대로 추측한다
+    (크로미움은 Last-Modified 로부터 흐른 시간의 10%). 어제 고친 파일이면
+    몇 시간을 묻지도 않고 캐시에서 꺼내 쓴다. HTML 만 no-cache 로 고쳐 놨더니
+    **새 HTML + 예전 JS** 조합이 되어, 버튼은 보이는데 핸들러가 안 붙었다.
+
+    no-cache 는 "캐시하지 말라"가 아니라 "쓸 때마다 확인하라"다. 안 바뀌었으면
+    304 (본문 없음) 라서 비용은 왕복 한 번뿐이다. 이 도구는 나 혼자 쓴다.
+    """
+
+    def file_response(self, *args, **kwargs):
+        resp = super().file_response(*args, **kwargs)
+        resp.headers["Cache-Control"] = "no-cache"
+        return resp
+
+
+app.mount("/static", NoCacheStatic(directory=STATIC_DIR), name="static")
