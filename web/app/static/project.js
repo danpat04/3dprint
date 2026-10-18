@@ -135,19 +135,22 @@ const trBtn = document.getElementById('tr');
 function applyTranslucent(mesh) {
   const m = mesh.material;
   m.transparent = translucent;
-  m.opacity = translucent ? 0.32 : 1;
+  m.opacity = translucent ? 0.26 : 1;
   m.depthWrite = !translucent;
   m.side = translucent ? THREE.DoubleSide : THREE.FrontSide;
   m.needsUpdate = true;
 }
 
-trBtn.classList.toggle('on', translucent);
-trBtn.onclick = () => {
-  translucent = !translucent;
-  localStorage.setItem('translucent', translucent ? '1' : '0');
+// 버튼이 없어도(예전 HTML 이 캐시된 경우) 스크립트가 죽지 않게 한다
+if (trBtn) {
   trBtn.classList.toggle('on', translucent);
-  (current || []).forEach(applyTranslucent);
-};
+  trBtn.onclick = () => {
+    translucent = !translucent;
+    localStorage.setItem('translucent', translucent ? '1' : '0');
+    trBtn.classList.toggle('on', translucent);
+    (current || []).forEach(applyTranslucent);
+  };
+}
 
 // 조립품일 때만 조각 목록을 보여준다 — 단품은 켤 것도 끌 것도 없다
 function renderSolids(solids, meshes) {

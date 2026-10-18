@@ -235,7 +235,7 @@ def save_note(slug: str, kind: str = Body(...), image: str = Body(...),
 
 @app.get("/draw", response_class=HTMLResponse)
 def draw_page():
-    return _page("draw.html")
+    return _html(_page("draw.html"))
 
 
 @app.get("/health")
@@ -252,9 +252,19 @@ def _page(name: str) -> str:
     return (STATIC_DIR / name).read_text(encoding="utf-8").replace("__BASE__", BASE_HREF)
 
 
+def _html(body: str) -> HTMLResponse:
+    """HTML 은 **캐시하지 않는다.**
+
+    헤더가 하나도 없으면 브라우저가 임의로 캐시해 버린다. 그러면 정적 파일은
+    ETag 로 갱신되는데 HTML 만 예전 것이 남아, 새로 넣은 버튼이 없는 채로
+    새 스크립트가 돌다가 getElementById 가 null 을 주고 거기서 죽는다.
+    """
+    return HTMLResponse(body, headers={"Cache-Control": "no-cache"})
+
+
 @app.get("/", response_class=HTMLResponse)
 def index():
-    return _page("index.html")
+    return _html(_page("index.html"))
 
 
 @app.get("/p/{slug:path}", response_class=HTMLResponse)
@@ -262,9 +272,10 @@ def project_page(slug: str):
     project = P.get_project(slug)
     if project is None:
         raise HTTPException(404, "project not found")
-    html = _page("project.html")
-    return html.replace("<body class=\"proj\">",
-                        f"<body class=\"proj\" data-slug=\"{project.slug}\">")
+    html = _page("project.html").replace(
+        "<body class=\"proj\">",
+        f"<body class=\"proj\" data-slug=\"{project.slug}\">")
+    return _html(html)
 
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
