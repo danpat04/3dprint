@@ -79,6 +79,7 @@ BOT = (Align.CENTER, Align.CENTER, Align.MIN)
 TOP = (Align.CENTER, Align.CENTER, Align.MAX)
 
 ELBOW_AXIS_PT = None
+NECK_OVER = 25.0        # 수직 절단 여유 — 비스듬히 잘리는 만큼 더 뽑아 둔다
 
 
 def build_cover():
@@ -111,9 +112,11 @@ def build_cover():
         end_c = Vector(ELBOW_R - ELBOW_R * math.cos(th), 0,
                        FLANGE_T + ELBOW_R * math.sin(th))
         ext_pl = Plane(origin=end_c, z_dir=tang)
+        # 출구 면은 **지면에 수직**(x = 일정). 중심선 길이가 NECK_EXT 가 되는 x 에서 자른다
+        x_cut = end_c.X + NECK_EXT * math.sin(th)
         with BuildSketch(ext_pl):
             Circle(ELBOW_BORE / 2 + NECK_WALL)
-        extrude(amount=NECK_EXT)                            # 직선 목
+        extrude(amount=NECK_EXT + NECK_OVER)                # 직선 목 (아래에서 수직면으로 자른다)
         add(thread)                                         # 나사산
 
         # 칼라–플랜지 이음 모따기 — **가장 빠듯한 곳**이다.
@@ -132,7 +135,7 @@ def build_cover():
         revolve(prof_in, axis=axis, revolution_arc=ELBOW_TURN, mode=Mode.SUBTRACT)
         with BuildSketch(ext_pl):
             Circle(ELBOW_BORE / 2)
-        extrude(amount=NECK_EXT, mode=Mode.SUBTRACT)
+        extrude(amount=NECK_EXT + NECK_OVER, mode=Mode.SUBTRACT)
 
         # 오링 홈 — 홈 안쪽이 ⌀35.9 라 구멍(31.5) 바깥 단단한 상판 위에 앉는다
         extrude(oring, ORING_DEPTH, mode=Mode.SUBTRACT)
@@ -142,10 +145,16 @@ def build_cover():
             Box(FLANGE_D, FLANGE_D, FLANGE_T, align=(Align.MIN, Align.CENTER, Align.MIN),
                 mode=Mode.SUBTRACT)
 
+        # 출구를 수직면으로 자른다 (관축에 수직이 아니라 지면에 수직)
+        with Locations((x_cut, 0, 0)):
+            Box(FLANGE_D, FLANGE_D * 2, 200, align=(Align.MIN, Align.CENTER, Align.MIN),
+                mode=Mode.SUBTRACT)
+
         # 출구 나팔 — 호스가 꺾이는 지점의 날카로운 모서리를 없앤다.
         # 출구 면은 **법선이 엘보 끝 접선과 같은 평면**이다. 그것으로 고른다
         mouth_faces = [f for f in part.faces()
-                       if abs(f.normal_at(f.center()).dot(tang) - 1.0) < 1e-3]
+                       if abs(f.normal_at(f.center()).X - 1.0) < 1e-3
+                       and abs(f.center().X - x_cut) < 1e-3]
         if mouth_faces:
             edges = mouth_faces[0].edges()
             for r in (MOUTH_FLARE, 1.5, 0.8):
