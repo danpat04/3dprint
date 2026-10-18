@@ -53,6 +53,7 @@ from models.주방.식기세척기관_싱크대커버.params import (
     FLANGE_T,
     HOLE_D,
     MOUTH_FLARE,
+    NECK_EXT,
     NECK_WALL,
     NUT_H,
     NUT_FLUTE_R,
@@ -103,6 +104,14 @@ def build_cover():
             Cylinder(COLLAR_ROOT / 2, COLLAR_LEN - COLLAR_PILOT, align=TOP)
         Cylinder(FLANGE_D / 2, FLANGE_T, align=BOT)         # 플랜지 (상판 위)
         revolve(prof_out, axis=axis, revolution_arc=ELBOW_TURN)
+        th = math.radians(ELBOW_TURN)
+        tang = Vector(math.sin(th), 0, math.cos(th))
+        end_c = Vector(ELBOW_R - ELBOW_R * math.cos(th), 0,
+                       FLANGE_T + ELBOW_R * math.sin(th))
+        ext_pl = Plane(origin=end_c, z_dir=tang)
+        with BuildSketch(ext_pl):
+            Circle(ELBOW_BORE / 2 + NECK_WALL)
+        extrude(amount=NECK_EXT)                            # 직선 목
         add(thread)                                         # 나사산
 
         # 칼라–플랜지 이음 모따기 — **가장 빠듯한 곳**이다.
@@ -119,14 +128,15 @@ def build_cover():
         Cylinder(BORE_D / 2, COLLAR_LEN, align=TOP, mode=Mode.SUBTRACT)
         Cone(BORE_D / 2, ELBOW_BORE / 2, FLANGE_T, align=BOT, mode=Mode.SUBTRACT)
         revolve(prof_in, axis=axis, revolution_arc=ELBOW_TURN, mode=Mode.SUBTRACT)
+        with BuildSketch(ext_pl):
+            Circle(ELBOW_BORE / 2)
+        extrude(amount=NECK_EXT, mode=Mode.SUBTRACT)
 
         # 오링 홈 — 홈 안쪽이 ⌀35.9 라 구멍(31.5) 바깥 단단한 상판 위에 앉는다
         extrude(oring, ORING_DEPTH, mode=Mode.SUBTRACT)
 
         # 출구 나팔 — 호스가 꺾이는 지점의 날카로운 모서리를 없앤다.
         # 출구 면은 **법선이 엘보 끝 접선과 같은 평면**이다. 그것으로 고른다
-        th = math.radians(ELBOW_TURN)
-        tang = Vector(math.sin(th), 0, math.cos(th))
         mouth_faces = [f for f in part.faces()
                        if abs(f.normal_at(f.center()).dot(tang) - 1.0) < 1e-3]
         if mouth_faces:
