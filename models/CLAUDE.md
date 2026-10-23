@@ -95,7 +95,7 @@ finalize_iteration(part.part)
   프로젝트마다 Claude 세션이 하나 붙고, 저장소 전체가 `/workspace` 에 마운트되며 작업 위치는 그 모델 폴더다.
   세션에서는 `cd /workspace && python -m models.<프로젝트>.<파일>`, 터미널에서는 `uv run python -m ...`.
   구 ocp_vscode 뷰어(`localhost:3939`)는 쓰지 않는다 — 세션 컨테이너에 없고, `show()` 실패는 무해하다
-- **`.gitignore`**: `*.step`, `*.stl`, `exports/`, `intermediate/`, `work/` 는 루트 `.gitignore` 에 제외 (재생성 가능). 프로젝트가 중간 계산을 캐시하면 `work/` 에 둔다 — `.npz` 같은 바이너리가 히스토리에 박히지 않는다. git 에 남는 결과물은 `images/` 의 최종 PNG + `model.py` 소스. `uv.lock` 은 의존성 재현성 위해 커밋됨
+- **`.gitignore`**: `*.step`, `*.stl`, `*.npz`, `exports/`, `intermediate/` 는 루트 `.gitignore` 에 제외 (재생성 가능). 오래 걸리는 중간 계산을 캐시하는 프로젝트는 보조 스크립트와 캐시를 `work/` 에 둔다 — **스크립트(.py)는 git 에 남고** 캐시(`.npz`)만 빠진다. git 에 남는 결과물은 `images/` 의 최종 PNG + `model.py` 소스. `uv.lock` 은 의존성 재현성 위해 커밋됨
 - **f3d 렌더 옵션**: scene up=+Z, AO+AA 활성화. 변경하려면 `_lib/iter.py` 수정
 
 ## 검증 한계 (Claude 가 못 보는 것)

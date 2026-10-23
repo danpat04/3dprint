@@ -10,4 +10,4 @@ exports/
 intermediate/
 feedback/
 models/_drafts/
-work/
+*.npz
