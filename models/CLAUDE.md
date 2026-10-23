@@ -62,7 +62,7 @@ finalize_iteration(part.part)
 2. `intermediate/` 의 기존 `iter_NNN.*` 스캔 → 다음 번호 결정
 3. `intermediate/iter_NNN.step` + 4방향 PNG (iso/front/top/side) 저장
 4. `exports/<프로젝트명>.step` 덮어쓰기
-5. ocp_vscode 뷰어로 `show()` (컨테이너 미실행 시 graceful fail)
+5. `show()` 호출 — **뷰어는 더 이상 없다.** 실패해도 iter.py 가 감싸 처리하므로 무시한다
 
 다중 파트 프로젝트는 `body.py` 등 분리 + `assembly.py` 끝에서 `finalize_iteration(assembled_part)` 호출.
 
@@ -73,7 +73,10 @@ finalize_iteration(part.part)
 - 발견된 문제는 다음 iter 에서 수정
 
 ### 5. 사용자 확인 → 피드백 → 다음 iter
-사용자가 ocp_vscode 뷰어(`localhost:3939`)로 결과 확인 → 피드백 제공 → Claude 가 `model.py` 수정 → `uv run python -m models.<프로젝트>.model` 재실행 → iter_002 자동 생성.
+사용자가 **`danp.at/tools/modeling` 패널**에서 결과 확인 → 피드백 제공 → Claude 가 `model.py` 수정 → 재실행 → iter_002 자동 생성.
+
+세션에서 빌드한 뒤에는 `show_part` 를 불러 그 파트를 패널에 띄운다. 패널이 보여줄 수 있는 것은
+`exports/` 의 파일이다 (`.stl` 이 있으면 그걸 쓰고, 없으면 `.step` 을 변환한다).
 
 **iter 번호는 자동 증가. 사용자가 "iter 3" 처럼 번호로 참조하면 그 시점의 PNG/STEP을 확인.**
 
@@ -88,13 +91,16 @@ finalize_iteration(part.part)
 ## 사전 조건 / 운영 메모
 
 - **Python 실행**: 항상 `uv run` (예: `uv run python -m models.<프로젝트>.model`)
-- **ocp_vscode 뷰어**: 사용자가 docker compose 로 띄워둠 (`localhost:3939`). 미실행이면 show() 만 실패하고 export/render는 정상 동작
-- **`.gitignore`**: `*.step`, `*.stl`, `exports/`, `intermediate/` 는 루트 `.gitignore` 에 제외 (재생성 가능). git 에 남는 결과물은 `images/` 의 최종 PNG + `model.py` 소스. `uv.lock` 은 의존성 재현성 위해 커밋됨
+- **확인 경로**: `danp.at/tools/modeling` (도구 `modeler`, 저장소는 `~/workspace/modeler`).
+  프로젝트마다 Claude 세션이 하나 붙고, 저장소 전체가 `/workspace` 에 마운트되며 작업 위치는 그 모델 폴더다.
+  세션에서는 `cd /workspace && python -m models.<프로젝트>.<파일>`, 터미널에서는 `uv run python -m ...`.
+  구 ocp_vscode 뷰어(`localhost:3939`)는 쓰지 않는다 — 세션 컨테이너에 없고, `show()` 실패는 무해하다
+- **`.gitignore`**: `*.step`, `*.stl`, `exports/`, `intermediate/`, `work/` 는 루트 `.gitignore` 에 제외 (재생성 가능). 프로젝트가 중간 계산을 캐시하면 `work/` 에 둔다 — `.npz` 같은 바이너리가 히스토리에 박히지 않는다. git 에 남는 결과물은 `images/` 의 최종 PNG + `model.py` 소스. `uv.lock` 은 의존성 재현성 위해 커밋됨
 - **f3d 렌더 옵션**: scene up=+Z, AO+AA 활성화. 변경하려면 `_lib/iter.py` 수정
 
 ## 검증 한계 (Claude 가 못 보는 것)
 
-- **실제 조립 가능성** — 다른 파트와의 fit 은 사용자가 ocp_vscode 에서 직접 확인
+- **실제 조립 가능성** — 다른 파트와의 fit 은 사용자가 패널에서 직접 확인
 - **3D 프린트 가능성** — 오버행/얇은 벽/서포트 필요성 같은 출력 관점 검토는 사용자 영역
 - **내부 구조** — 단면(section) PNG 는 현재 기본 셋에 없음. 필요하면 사용자가 요청
 - **치수 정확성** — PNG 만으로는 mm 단위 검증 불가능. STEP 파일의 BBox/볼륨/면 개수 같은 정량 지표는 별도 코드 assert로 보완해야 함 (현재 미구현, 필요해지면 헬퍼 확장)
