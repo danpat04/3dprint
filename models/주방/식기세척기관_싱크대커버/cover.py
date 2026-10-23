@@ -56,6 +56,7 @@ from models.주방.식기세척기관_싱크대커버.params import (
     HOLE_D,
     MOUTH_FLARE,
     NECK_EXT,
+    HORIZ_EXT,
     NECK_WALL,
     NUT_H,
     NUT_FLUTE_R,
@@ -79,7 +80,6 @@ BOT = (Align.CENTER, Align.CENTER, Align.MIN)
 TOP = (Align.CENTER, Align.CENTER, Align.MAX)
 
 ELBOW_AXIS_PT = None
-NECK_OVER = 25.0        # 수직 절단 여유 — 비스듬히 잘리는 만큼 더 뽑아 둔다
 
 
 def build_cover():
@@ -98,6 +98,23 @@ def build_cover():
     oring = (Plane.XY * Circle((ORING_MEAN + ORING_W) / 2)
              - Plane.XY * Circle((ORING_MEAN - ORING_W) / 2))
 
+    th = math.radians(ELBOW_TURN)
+    tang = Vector(math.sin(th), 0, math.cos(th))
+    end_c = Vector(ELBOW_R - ELBOW_R * math.cos(th), 0,
+                   FLANGE_T + ELBOW_R * math.sin(th))
+    ext_pl = Plane(origin=end_c, z_dir=tang)
+    # 대각선 목 → 수평으로 한 번 더 꺾기 → 수평 목. 출구 면은 자연히 지면에 수직
+    p2 = end_c + tang * NECK_EXT
+    ctr2 = p2 + Vector(math.cos(th), 0, -math.sin(th)) * ELBOW_R
+    axis2 = Axis((ctr2.X, 0, ctr2.Z), (0, 1, 0))
+    turn2 = 90.0 - ELBOW_TURN
+    pl2 = Plane(origin=p2, z_dir=tang)
+    p3 = Vector(ctr2.X, 0, ctr2.Z + ELBOW_R)
+    pl3 = Plane(origin=p3, z_dir=(1, 0, 0))
+    x_cut = p3.X + HORIZ_EXT
+    prof2_out = pl2 * Circle(ELBOW_BORE / 2 + NECK_WALL)
+    prof2_in = pl2 * Circle(ELBOW_BORE / 2)
+
     with BuildPart() as part:
         # 칼라 — 나사 골지름 ⌀29.6. 파일럿 턱은 없다 (너트를 막았다).
         # 구멍 안에서의 중심은 나사산 꼭대기(⌀31.0)가 잡아준다
@@ -107,16 +124,13 @@ def build_cover():
             Cylinder(COLLAR_ROOT / 2, COLLAR_LEN - COLLAR_PILOT, align=TOP)
         Cylinder(FLANGE_D / 2, FLANGE_T, align=BOT)         # 플랜지 (상판 위)
         revolve(prof_out, axis=axis, revolution_arc=ELBOW_TURN)
-        th = math.radians(ELBOW_TURN)
-        tang = Vector(math.sin(th), 0, math.cos(th))
-        end_c = Vector(ELBOW_R - ELBOW_R * math.cos(th), 0,
-                       FLANGE_T + ELBOW_R * math.sin(th))
-        ext_pl = Plane(origin=end_c, z_dir=tang)
-        # 출구 면은 **지면에 수직**(x = 일정). 중심선 길이가 NECK_EXT 가 되는 x 에서 자른다
-        x_cut = end_c.X + NECK_EXT * math.sin(th)
         with BuildSketch(ext_pl):
             Circle(ELBOW_BORE / 2 + NECK_WALL)
-        extrude(amount=NECK_EXT + NECK_OVER)                # 직선 목 (아래에서 수직면으로 자른다)
+        extrude(amount=NECK_EXT)                            # 대각선 직선 목
+        revolve(prof2_out, axis=axis2, revolution_arc=turn2)
+        with BuildSketch(pl3):
+            Circle(ELBOW_BORE / 2 + NECK_WALL)
+        extrude(amount=HORIZ_EXT)                           # 수평 목
         add(thread)                                         # 나사산
 
         # 칼라–플랜지 이음 모따기 — **가장 빠듯한 곳**이다.
@@ -135,7 +149,11 @@ def build_cover():
         revolve(prof_in, axis=axis, revolution_arc=ELBOW_TURN, mode=Mode.SUBTRACT)
         with BuildSketch(ext_pl):
             Circle(ELBOW_BORE / 2)
-        extrude(amount=NECK_EXT + NECK_OVER, mode=Mode.SUBTRACT)
+        extrude(amount=NECK_EXT, mode=Mode.SUBTRACT)
+        revolve(prof2_in, axis=axis2, revolution_arc=turn2, mode=Mode.SUBTRACT)
+        with BuildSketch(pl3):
+            Circle(ELBOW_BORE / 2)
+        extrude(amount=HORIZ_EXT, mode=Mode.SUBTRACT)
 
         # 오링 홈 — 홈 안쪽이 ⌀35.9 라 구멍(31.5) 바깥 단단한 상판 위에 앉는다
         extrude(oring, ORING_DEPTH, mode=Mode.SUBTRACT)
@@ -143,11 +161,6 @@ def build_cover():
         # 출구 쪽 플랜지 평면 절단 — 싱크대 끝과의 간섭 회피. 플랜지 높이만 자른다
         with Locations((FLANGE_FLAT_X, 0, 0)):
             Box(FLANGE_D, FLANGE_D, FLANGE_T, align=(Align.MIN, Align.CENTER, Align.MIN),
-                mode=Mode.SUBTRACT)
-
-        # 출구를 수직면으로 자른다 (관축에 수직이 아니라 지면에 수직)
-        with Locations((x_cut, 0, 0)):
-            Box(FLANGE_D, FLANGE_D * 2, 200, align=(Align.MIN, Align.CENTER, Align.MIN),
                 mode=Mode.SUBTRACT)
 
         # 출구 나팔 — 호스가 꺾이는 지점의 날카로운 모서리를 없앤다.
