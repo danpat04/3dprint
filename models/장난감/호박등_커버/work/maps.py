@@ -56,7 +56,3 @@ Rf=Rf*(1-w[None,:])+Rs*w[None,:]
 # 위쪽 줄기 영향 제거
 j=np.argmin(np.abs(np.degrees(d['ph'])-66)); Rf[:,j:]=Rf[:,[j]]
 np.savez('work/maps.npz',R=Rf,H=H,Hd=Hd,M=M,s=s)
-import matplotlib; matplotlib.use('Agg'); import matplotlib.pyplot as plt
-fig,ax=plt.subplots(2,1,figsize=(12,8))
-ax[0].imshow(Rf.T,origin='lower',aspect='auto',extent=[0,360,-90,90]);ax[1].imshow(H.T,origin='lower',aspect='auto',extent=[0,360,-90,90])
-plt.savefig('/tmp/r/map2.png',dpi=60)

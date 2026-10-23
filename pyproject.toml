@@ -7,6 +7,11 @@ dependencies = [
     "build123d",
     "f3d>=3.5.0",
     "ocp-vscode",
+    # 메시에서 출발하는 모델(온라인 STL 변형)용. 장난감/호박등_커버 가 쓴다 —
+    # 반경 맵 필터링(scipy), 등위면 추출(scikit-image), 메시 입출력·단순화(trimesh)
+    "trimesh",
+    "scipy",
+    "scikit-image",
 ]
 
 [tool.hatch.build.targets.wheel]
