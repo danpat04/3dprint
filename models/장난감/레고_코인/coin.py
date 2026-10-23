@@ -74,5 +74,5 @@ def build_coin(label="5"):
 
 
 if __name__ == "__main__":
-    finalize_iteration(build_coin("1"))
+    finalize_iteration(build_coin(None))
 
