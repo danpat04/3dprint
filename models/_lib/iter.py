@@ -35,7 +35,7 @@ def _next_iter_number(intermediate_dir: Path) -> int:
     return (max(nums) + 1) if nums else 1
 
 
-def _render_four_views(step_path: Path, out_dir: Path, iter_num: int) -> list[Path]:
+def _render_four_views(model_path: Path, out_dir: Path, iter_num: int) -> list[Path]:
     import f3d
 
     f3d.Engine.autoload_plugins()
@@ -44,7 +44,7 @@ def _render_four_views(step_path: Path, out_dir: Path, iter_num: int) -> list[Pa
     engine.options["scene.up_direction"] = "+Z"
     engine.options["render.effect.ambient_occlusion"] = True
     engine.options["render.effect.antialiasing.enable"] = True
-    engine.scene.add(str(step_path))
+    engine.scene.add(str(model_path))
 
     cam = engine.window.camera
     cam.reset_to_bounds()
@@ -112,6 +112,48 @@ def finalize_iteration(part, *, project_dir: Path | None = None, show_in_viewer:
             rel = project_name
         _notify_feedback_tool(rel)
 
+    return iter_num
+
+
+def finalize_mesh_iteration(stl: Path | str, *, suffix: str = "",
+                            project_dir: Path | None = None) -> int:
+    """**메시로 만든 모델**을 마무리한다. iter 번호 반환.
+
+    build123d 로 솔리드를 쌓는 모델은 STEP 이 정본이지만, 온라인 STL 을 변형하거나
+    등위면에서 뽑아내는 모델은 **처음부터 메시**다. 그걸 STEP 으로 내보내려면 삼각형마다
+    B-rep 면을 만들어야 하는데, 그렇게 나온 파일은 아무 데서도 쓸 수 없다:
+
+      - 뱀부랩 슬라이서가 로딩을 끝내지 못한다 (4 만 면 셸을 봉합·테셀레이션해야 한다).
+        같은 모델의 STL 은 곧바로 열린다 — 실사용에서 확인했다.
+      - 패널(danp.at/tools/modeling)의 STEP → STL 변환도 제한 시간을 넘긴다.
+      - 파일이 103MB 로 STL(34MB)의 3 배다.
+
+    그래서 메시 모델은 **STL 이 정본**이다. STEP 을 만들지 않는다.
+
+    suffix 를 주면 `iter_007_<suffix>.stl` / `exports/<프로젝트명>_<suffix>.stl` 로 간다
+    (한 프로젝트에서 치수 변종을 여러 개 뽑을 때).
+    """
+    project_dir = project_dir or _caller_project_dir()
+    stl = Path(stl)
+
+    intermediate_dir = project_dir / "intermediate"
+    exports_dir = project_dir / "exports"
+    intermediate_dir.mkdir(exist_ok=True)
+    exports_dir.mkdir(exist_ok=True)
+
+    iter_num = _next_iter_number(intermediate_dir)
+    iter_stl = intermediate_dir / f"iter_{iter_num:03d}{suffix}.stl"
+    iter_stl.write_bytes(stl.read_bytes())
+    final_stl = exports_dir / f"{project_dir.name}{suffix}.stl"
+    final_stl.write_bytes(iter_stl.read_bytes())
+
+    pngs = _render_four_views(iter_stl, intermediate_dir, iter_num)
+
+    print(f"[models] iter {iter_num:03d} done (mesh)")
+    print(f"  stl:    {iter_stl}")
+    print(f"  final:  {final_stl}")
+    for p in pngs:
+        print(f"  png:    {p}")
     return iter_num
 
 

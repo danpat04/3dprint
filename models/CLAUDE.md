@@ -66,6 +66,24 @@ finalize_iteration(part.part)
 
 다중 파트 프로젝트는 `body.py` 등 분리 + `assembly.py` 끝에서 `finalize_iteration(assembled_part)` 호출.
 
+#### 메시로 만드는 모델은 STL 이 정본이다
+
+온라인 STL 을 변형하거나 등위면에서 뽑아내는 모델은 **처음부터 메시**다. 그런 결과를
+STEP 으로 내보내려면 삼각형마다 B-rep 면을 만들어야 하는데, 그렇게 나온 파일은
+어디에도 쓸 수 없다:
+
+- **뱀부랩 슬라이서가 로딩을 끝내지 못한다** (4 만 면 셸을 봉합·테셀레이션해야 한다).
+  같은 모델의 STL 은 곧바로 열린다 — 실사용에서 확인했다 (`장난감/호박등_커버`)
+- 패널의 STEP → STL 변환도 제한 시간(300 초)을 넘긴다
+- 파일이 103MB 로 STL(34MB)의 3 배다
+
+그래서 메시 모델은 `finalize_mesh_iteration(stl, suffix="")` 를 쓴다 — 번호·렌더·
+`exports/` 는 똑같이 하고 **STEP 만 만들지 않는다.** 패널도 같은 이름의 `.stl` 이 있으면
+그걸 먼저 쓴다.
+
+솔리드를 쌓아 만드는 보통의 모델은 그대로 STEP 이 정본이다 (면이 수십 개라 문제없고,
+치수·불린을 다시 다룰 수 있다).
+
 ### 4. 검증
 모델 실행 후 Claude는 `intermediate/iter_NNN_*.png` 4장을 모두 Read 해서:
 - 사용자가 명시한 acceptance criteria 가 시각적으로 충족되는지 확인
