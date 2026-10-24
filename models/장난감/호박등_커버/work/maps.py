@@ -31,6 +31,15 @@ for i in range(NT):
     for j in range(j0,NP):
         fade=max(0.0,1-(j-j0)/18.0)
         Rg[i,j]=R2[ig,j]+off*fade
+# 아래쪽 띠도 같은 방식으로 복구
+j1=44
+for i in range(NT):
+    if good0<=i<good1: continue
+    ig=good0+((i-good0)%per)
+    off=R2[i,j1+1]-R2[ig,j1+1]
+    for j in range(0,j1+1):
+        fade=max(0.0,1-(j1-j)/15.0)
+        Rg[i,j]=R2[ig,j]+off*fade
 R2=Rg
 # 얼굴 구멍
 H=np.zeros_like(M)
@@ -53,6 +62,11 @@ Rf=np.where(ndi.binary_dilation(M|Hd,iterations=4),Rm,Rf)
 Rs=ndi.gaussian_filter(Rf,(2.0,1.0),mode=('wrap','nearest'))
 w=np.zeros(NP); w[130:]=1.0; w=ndi.gaussian_filter(w,3)   # 위쪽(φ>40)은 더 부드럽게
 Rf=Rf*(1-w[None,:])+Rs*w[None,:]
+# 꼭대기는 갈비 무늬/잡음을 서서히 줄여 매끈하게 (φ 28°→62°)
+phd=np.degrees(d['ph']); Raxi=Rf.mean(0)
+wt=np.clip((phd-28)/34.0,0,1); wt=wt*wt*(3-2*wt)
+Rf=Raxi[None,:]+(Rf-Raxi[None,:])*(1-wt[None,:])
 # 위쪽 줄기 영향 제거
 j=np.argmin(np.abs(np.degrees(d['ph'])-66)); Rf[:,j:]=Rf[:,[j]]
-np.savez('work/maps.npz',R=Rf,H=H,Hd=Hd,M=M,s=s)
+Hs=ndi.gaussian_filter(H.astype(float),(2.0,1.2),mode='wrap')   # 구멍 윤곽 부드러운 필드(0.5 등치선)
+np.savez('work/maps.npz',R=Rf,H=H,Hd=Hd,M=M,s=s,Hs=Hs)
